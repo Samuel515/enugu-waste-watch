@@ -108,6 +108,7 @@ const RegisterForm = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10"
+              maxLength={8}
               disabled={isLoading}
             />
           </div>
@@ -124,6 +125,7 @@ const RegisterForm = () => {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               className="pl-10"
+              maxLength={8}
               disabled={isLoading}
             />
           </div>

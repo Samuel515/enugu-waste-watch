@@ -66,6 +66,7 @@ const LoginForm = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="pl-10"
+            maxLength={8}
             disabled={isLoading}
           />
         </div>

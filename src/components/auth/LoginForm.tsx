@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Mail, Lock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -29,9 +29,30 @@ const LoginForm = () => {
     setIsLoading(true);
     
     try {
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', email)
+        .single();
+
+      if (userError || !userData) {
+        toast({
+          title: "Email Not Registered",
+          description: "This email is not registered. Please sign up first.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       await login(email, password);
     } catch (error) {
       console.error("Login error:", error);
+      toast({
+        title: "Login Failed",
+        description: "Invalid login credentials. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

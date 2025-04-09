@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -142,8 +141,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       toast({
-        title: "Signup successful",
-        description: "Welcome to Enugu Waste Watch!",
+        title: "Signup Successful",
+        description: "Please check your email to confirm your account. You'll need to confirm your email before logging in.",
+        duration: 5000,
       });
     } catch (error: any) {
       console.error("Signup error:", error);

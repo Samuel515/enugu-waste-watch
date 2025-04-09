@@ -9,16 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Search, UserPlus, Edit, Trash2, UserCheck, UserX } from "lucide-react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 
-// Mock users data - would be replaced by backend API
-const MOCK_USERS = [
-  { id: "1", name: "John Resident", email: "resident@example.com", role: "resident", area: "Independence Layout", status: "active" },
-  { id: "2", name: "Mary Official", email: "official@example.com", role: "official", area: null, status: "active" },
-  { id: "3", name: "Admin User", email: "admin@example.com", role: "admin", area: null, status: "active" },
-  { id: "4", name: "Jane Smith", email: "jane@example.com", role: "resident", area: "New Haven", status: "inactive" },
-  { id: "5", name: "Robert Johnson", email: "robert@example.com", role: "resident", area: "Trans Ekulu", status: "active" },
-];
-
-interface User {
+// Define extended user type for the UI
+interface ExtendedUser {
   id: string;
   name: string;
   email: string;
@@ -27,10 +19,19 @@ interface User {
   status: "active" | "inactive";
 }
 
+// Mock users data - would be replaced by backend API
+const MOCK_USERS: ExtendedUser[] = [
+  { id: "1", name: "John Resident", email: "resident@example.com", role: "resident", area: "Independence Layout", status: "active" },
+  { id: "2", name: "Mary Official", email: "official@example.com", role: "official", area: null, status: "active" },
+  { id: "3", name: "Admin User", email: "admin@example.com", role: "admin", area: null, status: "active" },
+  { id: "4", name: "Jane Smith", email: "jane@example.com", role: "resident", area: "New Haven", status: "inactive" },
+  { id: "5", name: "Robert Johnson", email: "robert@example.com", role: "resident", area: "Trans Ekulu", status: "active" },
+];
+
 const ManageUsers = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [users, setUsers] = useState<ExtendedUser[]>(MOCK_USERS);
 
   // Filter users based on search query
   const filteredUsers = users.filter(

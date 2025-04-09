@@ -1,6 +1,8 @@
 
-import React, { createContext, useState, useContext, ReactNode } from "react";
+import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
 
 // Define user roles
 export type UserRole = "resident" | "official" | "admin";
@@ -18,111 +20,163 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string, role: UserRole, area?: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo (in a real app, this would come from backend)
-const MOCK_USERS: User[] = [
-  { id: "1", name: "John Resident", email: "resident@example.com", role: "resident", area: "Independence Layout" },
-  { id: "2", name: "Mary Official", email: "official@example.com", role: "official" },
-  { id: "3", name: "Admin User", email: "admin@example.com", role: "admin" },
-];
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const { toast } = useToast();
   
-  // Check if there's a stored user in localStorage on initial load
-  React.useEffect(() => {
-    const storedUser = localStorage.getItem("waste-watch-user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+  // Set up auth state listener
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        
+        // If session exists, fetch user profile
+        if (session?.user) {
+          fetchUserProfile(session.user.id);
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
+  // Fetch user profile from profiles table
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
+
+      if (profile) {
+        setUser({
+          id: profile.id,
+          name: profile.name || '',
+          email: session?.user?.email || '',
+          role: profile.role as UserRole,
+          area: profile.area
+        });
+      }
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+    }
+  };
+
   const login = async (email: string, password: string) => {
-    // In a real app, you'd make an API call here
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        const foundUser = MOCK_USERS.find(u => u.email === email);
-        
-        if (foundUser && password === "password") { // Simple check for demo
-          setUser(foundUser);
-          localStorage.setItem("waste-watch-user", JSON.stringify(foundUser));
-          toast({
-            title: "Login successful",
-            description: `Welcome back, ${foundUser.name}!`,
-          });
-          resolve();
-        } else {
-          toast({
-            title: "Login failed",
-            description: "Invalid email or password",
-            variant: "destructive",
-          });
-          reject(new Error("Invalid credentials"));
-        }
-      }, 1000); // Simulate network delay
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      toast({
+        title: "Login successful",
+        description: "Welcome back!",
+      });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      throw error;
+    }
   };
 
   const signup = async (name: string, email: string, password: string, role: UserRole, area?: string) => {
-    // In a real app, you'd make an API call here
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        const existingUser = MOCK_USERS.find(u => u.email === email);
-        
-        if (existingUser) {
-          toast({
-            title: "Signup failed",
-            description: "Email already in use",
-            variant: "destructive",
-          });
-          reject(new Error("Email already in use"));
-          return;
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role,
+            area
+          }
         }
-        
-        // Create new user
-        const newUser: User = {
-          id: `${MOCK_USERS.length + 1}`,
-          name,
-          email,
-          role,
-          area,
-        };
-        
-        // In a real app, we'd save this to a database
-        MOCK_USERS.push(newUser);
-        
-        // Auto-login after signup
-        setUser(newUser);
-        localStorage.setItem("waste-watch-user", JSON.stringify(newUser));
-        
+      });
+      
+      if (error) {
         toast({
-          title: "Signup successful",
-          description: `Welcome to Enugu Waste Watch, ${name}!`,
+          title: "Signup failed",
+          description: error.message,
+          variant: "destructive",
         });
-        resolve();
-      }, 1000); // Simulate network delay
-    });
+        throw error;
+      }
+
+      toast({
+        title: "Signup successful",
+        description: "Welcome to Enugu Waste Watch!",
+      });
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      throw error;
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("waste-watch-user");
-    toast({
-      title: "Logged out",
-      description: "You have been logged out successfully",
-    });
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        toast({
+          title: "Logout failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      setUser(null);
+      toast({
+        title: "Logged out",
+        description: "You have been logged out successfully",
+      });
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      throw error;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, session, isAuthenticated: !!user, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -45,7 +45,7 @@ const Header = () => {
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
             <Trash2 className="h-6 w-6 text-waste-green" />
-            <span className="text-xl font-bold">Enugu Waste Watch</span>
+            <span className="text-xl font-bold sm:text-lg md:text-xl">Enugu Waste Watch</span>
           </Link>
         </div>
 
@@ -84,26 +84,26 @@ const Header = () => {
           </nav>
         )}
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           {user ? (
             <>
-              <Button size="sm" variant="ghost" asChild>
+              <Button size="icon" variant="ghost" asChild className="h-9 w-9 sm:h-10 sm:w-10">
                 <Link to="/notifications">
-                  <Bell className="h-5 w-5" />
+                  <Bell className="h-5 w-5 sm:h-6 sm:w-6" />
                 </Link>
               </Button>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <UserCircle className="h-8 w-8" />
+                  <Button variant="ghost" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full">
+                    <UserCircle className="h-6 w-6 sm:h-7 sm:w-7" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <div className="flex flex-col space-y-1 p-2">
                     <p className="text-sm font-medium leading-none">{user.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
+                      {user.email || user.phoneNumber}
                     </p>
                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary mt-1">
                       {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
@@ -133,8 +133,8 @@ const Header = () => {
               {/* Mobile Menu */}
               <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden">
-                    <Menu className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 md:hidden">
+                    <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
                     <span className="sr-only">Toggle menu</span>
                   </Button>
                 </SheetTrigger>
@@ -143,7 +143,7 @@ const Header = () => {
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">{user.name}</p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
+                        {user.email || user.phoneNumber}
                       </p>
                       <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary mt-1 w-fit">
                         {user.role.charAt(0).toUpperCase() + user.role.slice(1)}

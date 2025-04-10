@@ -26,7 +26,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <ScrollToTop />
+        <ScrollToTop children={""} />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />

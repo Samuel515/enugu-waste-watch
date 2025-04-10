@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
@@ -10,8 +9,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, Lock, Shield, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Loader2, AlertCircle } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Loader2, AlertCircle, Bell, Lock, Shield } from "lucide-react";
 
 const Settings = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -31,7 +30,6 @@ const Settings = () => {
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
-  // Fetch active sessions
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchSessions();
@@ -41,7 +39,7 @@ const Settings = () => {
   const fetchSessions = async () => {
     try {
       setIsLoadingSessions(true);
-      const { data, error } = await supabase.auth.admin.listUserSessions(user!.id);
+      const { data, error } = await supabase.auth.admin.listSessions(user!.id);
       
       if (error) {
         console.error("Error fetching sessions:", error);
@@ -93,7 +91,6 @@ const Settings = () => {
         description: "Your password has been changed successfully.",
       });
       
-      // Clear form
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -114,7 +111,6 @@ const Settings = () => {
     setIsSavingNotifications(true);
     
     try {
-      // Simulate saving to Supabase
       await new Promise(resolve => setTimeout(resolve, 500));
       
       toast({
@@ -140,7 +136,6 @@ const Settings = () => {
         throw error;
       }
       
-      // Refresh sessions list
       fetchSessions();
       
       toast({
@@ -161,14 +156,12 @@ const Settings = () => {
     setIsDeletingAccount(true);
     
     try {
-      // Delete user from Supabase Auth
       const { error } = await supabase.auth.admin.deleteUser(user!.id);
       
       if (error) {
         throw error;
       }
       
-      // Sign out after successful deletion
       await logout();
       
       toast({

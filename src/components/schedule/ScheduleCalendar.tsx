@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,7 +105,7 @@ const ScheduleCalendar = () => {
                   components={{
                     DayContent: (props: DayContentProps) => (
                       <div className="relative w-full h-full flex items-center justify-center">
-                        {props.children}
+                        <div>{props.day}</div>
                         {renderDateCell(props.date)}
                       </div>
                     ),

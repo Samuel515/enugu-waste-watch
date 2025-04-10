@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Trash2, Menu, UserCircle, LogOut, Settings, Bell } from "lucide-react";
+import { Leaf, Menu, UserCircle, LogOut, Settings, Bell } from "lucide-react";
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -44,7 +44,7 @@ const Header = () => {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
-            <Trash2 className="h-6 w-6 text-waste-green" />
+            <Leaf className="h-6 w-6 text-waste-green" />
             <span className="text-xl font-bold sm:text-lg md:text-xl">Enugu Waste Watch</span>
           </Link>
         </div>

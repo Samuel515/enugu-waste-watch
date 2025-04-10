@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,14 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Lock, Phone, AlignRight } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 const LoginForm = () => {
-  const [email, setEmail] = useState("");
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const emailFromURL = searchParams.get("email");
+
+  const [email, setEmail] = useState(emailFromURL || "");
   const [password, setPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -115,9 +120,8 @@ const LoginForm = () => {
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <div className="relative flex items-center">
-                <div className="absolute left-3 z-10 flex items-center gap-1 text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  <span className="text-sm">+234</span>
+                <div className="absolute inset-y-0 left-0 flex items-center justify-center w-14 border-r bg-muted text-muted-foreground rounded-l-md">
+                  +234
                 </div>
                 <Input
                   id="phone"

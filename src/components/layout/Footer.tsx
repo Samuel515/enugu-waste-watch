@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Trash2, Github, Instagram, Twitter, Mail, Phone } from "lucide-react";
+import { Leaf, Instagram, Facebook, Twitter, Mail, Phone } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -8,20 +8,20 @@ const Footer = () => {
       <div className="container py-8 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Logo and About */}
-          <div className="flex flex-col items-center md:items-center">
+          <div className="flex flex-col items-center">
             <div className="flex items-center gap-2">
-              <Trash2 className="h-6 w-6 text-waste-green" />
+              <Leaf className="h-6 w-6 text-waste-green" />
               <span className="text-xl font-bold">Enugu Waste Watch</span>
             </div>
-            <p className="mt-4 text-sm text-center md:text-center text-muted-foreground">
+            <p className="mt-4 text-sm text-center text-muted-foreground">
               Empowering residents to contribute to a cleaner and healthier Enugu State through digital waste management.
             </p>
           </div>
           
           {/* Quick Links */}
-          <div className="flex flex-col items-center md:items-center">
+          <div className="flex flex-col items-center">
             <h3 className="font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2 text-center md:text-center">
+            <ul className="space-y-2 text-center">
               <li>
                 <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Home
@@ -46,9 +46,9 @@ const Footer = () => {
           </div>
           
           {/* Legal */}
-          <div className="flex flex-col items-center md:items-center">
+          <div className="flex flex-col items-center">
             <h3 className="font-semibold mb-4">Legal</h3>
-            <ul className="space-y-2 text-center md:text-center">
+            <ul className="space-y-2 text-center">
               <li>
                 <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Privacy Policy
@@ -68,9 +68,9 @@ const Footer = () => {
           </div>
           
           {/* Contact */}
-          <div className="flex flex-col items-center md:items-center">
+          <div className="flex flex-col items-center">
             <h3 className="font-semibold mb-4">Contact</h3>
-            <ul className="space-y-2 text-center md:text-center">
+            <ul className="space-y-2 text-center">
               <li>
                 <a
                   href="mailto:info@enuguwaste.gov.ng"
@@ -110,13 +110,13 @@ const Footer = () => {
                 <span className="sr-only">Instagram</span>
               </a>
               <a
-                href="https://github.com"
+                href="https://facebook.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                <Github className="h-5 w-5" />
-                <span className="sr-only">GitHub</span>
+                <Facebook className="h-5 w-5" />
+                <span className="sr-only">Facebook</span>
               </a>
             </div>
           </div>

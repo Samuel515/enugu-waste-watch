@@ -29,6 +29,7 @@ interface AuthContextType {
   signInWithPhone: (phoneNumber: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
+  verifyPhone: (phoneNumber: string, token: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -46,6 +47,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth event:', event);
+        
         setSession(session);
         
         // If session exists, fetch user profile
@@ -120,6 +123,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         title: "Login successful",
         description: "Welcome back!",
       });
+      
+      navigate('/dashboard');
     } catch (error: any) {
       console.error("Login error:", error);
       throw error;
@@ -128,7 +133,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signupWithEmail = async (name: string, email: string, password: string, role: UserRole, area?: string) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -154,6 +159,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         description: "Please check your email to confirm your account. You'll need to confirm your email before logging in.",
         duration: 5000,
       });
+      
+      // Redirect back to auth page with email prefilled
+      navigate(`/auth?tab=login&email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       console.error("Signup error:", error);
       throw error;
@@ -192,8 +200,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         description: "Please verify your phone number with the code sent to continue.",
         duration: 5000,
       });
+      
+      // Navigate to verification page with phone number as state
+      navigate(`/auth?tab=verify&phone=${encodeURIComponent(formattedPhone)}`);
     } catch (error: any) {
       console.error("Phone signup error:", error);
+      throw error;
+    }
+  };
+
+  const verifyPhone = async (phoneNumber: string, token: string) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        phone: phoneNumber,
+        token,
+        type: 'sms'
+      });
+      
+      if (error) {
+        toast({
+          title: "Verification failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      toast({
+        title: "Verification successful",
+        description: "Your phone number has been verified. You are now logged in.",
+      });
+      
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error("Verification error:", error);
       throw error;
     }
   };
@@ -221,6 +261,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         title: "Login successful",
         description: "Welcome back!",
       });
+      
+      navigate('/dashboard');
     } catch (error: any) {
       console.error("Phone login error:", error);
       throw error;
@@ -229,10 +271,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithGoogle = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/dashboard'
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         }
       });
       
@@ -244,6 +290,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
         throw error;
       }
+      
+      console.log('Google auth initiated:', data);
     } catch (error: any) {
       console.error("Google login error:", error);
       throw error;
@@ -252,10 +300,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithApple = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
-          redirectTo: window.location.origin + '/dashboard'
+          redirectTo: `${window.location.origin}/dashboard`
         }
       });
       
@@ -267,6 +315,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
         throw error;
       }
+      
+      console.log('Apple auth initiated:', data);
     } catch (error: any) {
       console.error("Apple login error:", error);
       throw error;
@@ -320,11 +370,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       session, 
       isAuthenticated: !!user, 
       login, 
-      signupWithEmail: signupWithEmail,
+      signupWithEmail,
       signupWithPhone,
       signInWithPhone,
       signInWithGoogle,
       signInWithApple,
+      verifyPhone,
       logout 
     }}>
       {children}

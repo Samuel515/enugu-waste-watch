@@ -99,10 +99,10 @@ const ScheduleCalendar = () => {
                   onSelect={setSelectedDate}
                   className="rounded-md border w-full"
                   components={{
-                    DayContent: ({ date, ...props }) => (
+                    DayContent: ({ day, displayMonth, activeModifiers, ...props }) => (
                       <div className="relative w-full h-full flex items-center justify-center">
                         {props.children}
-                        {renderDateCell(date)}
+                        {renderDateCell(day)}
                       </div>
                     ),
                   }}

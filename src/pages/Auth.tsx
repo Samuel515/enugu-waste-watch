@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import AuthTabs from "@/components/auth/AuthTabs";
-import { Trash2 } from "lucide-react";
+import { Leaf } from "lucide-react";
 
 const Auth = () => {
   const { isAuthenticated } = useAuth();
@@ -14,6 +14,11 @@ const Auth = () => {
   // Get tab from URL query parameter
   const searchParams = new URLSearchParams(location.search);
   const defaultTab = searchParams.get("tab") || "login";
+  
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   
   // If user is already authenticated, redirect to dashboard
   useEffect(() => {
@@ -28,7 +33,7 @@ const Auth = () => {
         <div className="flex justify-center mb-8">
           <div className="flex flex-col items-center">
             <div className="bg-waste-green rounded-full p-3 mb-3">
-              <Trash2 className="h-8 w-8 text-white" />
+              <Leaf className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-center">Enugu Waste Watch</h1>
             <p className="text-sm text-muted-foreground mt-2 text-center">

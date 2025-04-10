@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Truck, MapPin, Clock } from "lucide-react";
+import { DayContentProps } from "react-day-picker";
 
 // Mock data
 const MOCK_SCHEDULE = [
@@ -36,7 +37,9 @@ const ScheduleCalendar = () => {
   const [view, setView] = useState<"calendar" | "list">("calendar");
 
   // Function to check if a date has a schedule
-  const hasSchedule = (date: Date) => {
+  const hasSchedule = (date: Date | undefined) => {
+    if (!date) return false;
+    
     return MOCK_SCHEDULE.some(
       (schedule) =>
         schedule.date.getDate() === date.getDate() &&
@@ -46,7 +49,9 @@ const ScheduleCalendar = () => {
   };
 
   // Function to get schedule for a specific date
-  const getScheduleForDate = (date: Date) => {
+  const getScheduleForDate = (date: Date | undefined) => {
+    if (!date) return undefined;
+    
     return MOCK_SCHEDULE.find(
       (schedule) =>
         schedule.date.getDate() === date.getDate() &&
@@ -56,8 +61,8 @@ const ScheduleCalendar = () => {
   };
 
   // Function to render date cell
-  const renderDateCell = (day: Date) => {
-    if (hasSchedule(day)) {
+  const renderDateCell = (date: Date | undefined) => {
+    if (date && hasSchedule(date)) {
       return <div className="bg-waste-green/20 w-full h-full rounded-full flex items-center justify-center" />;
     }
     return null;
@@ -99,10 +104,10 @@ const ScheduleCalendar = () => {
                   onSelect={setSelectedDate}
                   className="rounded-md border w-full"
                   components={{
-                    DayContent: ({ day, displayMonth, activeModifiers, ...props }) => (
+                    DayContent: (props: DayContentProps) => (
                       <div className="relative w-full h-full flex items-center justify-center">
                         {props.children}
-                        {renderDateCell(day)}
+                        {renderDateCell(props.date)}
                       </div>
                     ),
                   }}
@@ -172,42 +177,50 @@ const ScheduleCalendar = () => {
           
           <TabsContent value="list" className="mt-0">
             <div className="space-y-4">
-              {sortedSchedule.map((schedule, scheduleIndex) => (
-                <div key={scheduleIndex} className="border rounded-md p-4">
-                  <div className="mb-3">
-                    <h3 className="font-medium">
-                      {schedule.date.toLocaleDateString("en-US", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </h3>
-                    <Badge className="bg-waste-green mt-1">
-                      <Truck className="h-3 w-3 mr-1" />
-                      Collection Day
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {schedule.areas.map((area, areaIndex) => (
-                      <div
-                        key={areaIndex}
-                        className="p-3 border rounded-md bg-secondary/40"
-                      >
-                        <div className="flex items-center mb-1">
-                          <MapPin className="h-4 w-4 text-waste-green mr-1" />
-                          <span className="font-medium">{area.name}</span>
+              {sortedSchedule.length > 0 ? (
+                sortedSchedule.map((schedule, scheduleIndex) => (
+                  <div key={scheduleIndex} className="border rounded-md p-4">
+                    <div className="mb-3">
+                      <h3 className="font-medium">
+                        {schedule.date.toLocaleDateString("en-US", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </h3>
+                      <Badge className="bg-waste-green mt-1">
+                        <Truck className="h-3 w-3 mr-1" />
+                        Collection Day
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {schedule.areas.map((area, areaIndex) => (
+                        <div
+                          key={areaIndex}
+                          className="p-3 border rounded-md bg-secondary/40"
+                        >
+                          <div className="flex items-center mb-1">
+                            <MapPin className="h-4 w-4 text-waste-green mr-1" />
+                            <span className="font-medium">{area.name}</span>
+                          </div>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span>{area.time}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="h-3 w-3 mr-1" />
-                          <span>{area.time}</span>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-muted-foreground">
+                    No upcoming waste collections scheduled.
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           </TabsContent>
         </Tabs>

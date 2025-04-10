@@ -48,25 +48,25 @@ interface DashboardStatsProps {
 }
 
 const DashboardStats = ({ userRole }: DashboardStatsProps) => {
-  // Different stats based on user role
+  // Different stats based on user role, all showing zero activity
   const residentStats = [
     { 
       title: "Collection Schedule", 
-      value: "Tomorrow", 
+      value: "Not scheduled", 
       description: "Next waste collection in your area", 
       icon: <Calendar className="h-5 w-5" />,
       color: "waste-blue" 
     },
     { 
       title: "Reports Made", 
-      value: 3, 
+      value: 0, 
       description: "Waste issues you've reported", 
       icon: <AlertTriangle className="h-5 w-5" />,
       color: "waste-yellow" 
     },
     { 
       title: "Next Collection", 
-      value: "09:00 AM", 
+      value: "N/A", 
       description: "Scheduled time for pickup", 
       icon: <Clock className="h-5 w-5" />,
       color: "waste-green" 
@@ -76,22 +76,21 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
   const officialStats = [
     { 
       title: "Active Reports", 
-      value: 28, 
+      value: 0, 
       description: "Unresolved waste reports", 
       icon: <AlertTriangle className="h-5 w-5" />,
-      trend: { value: 12, isPositive: false },
       color: "waste-yellow" 
     },
     { 
       title: "Collections Today", 
-      value: 15, 
+      value: 0, 
       description: "Scheduled waste pickups", 
       icon: <Truck className="h-5 w-5" />,
       color: "waste-green" 
     },
     { 
       title: "Areas Covered", 
-      value: 8, 
+      value: 0, 
       description: "Districts with active collection", 
       icon: <Calendar className="h-5 w-5" />,
       color: "waste-blue" 
@@ -101,26 +100,23 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
   const adminStats = [
     { 
       title: "Total Reports", 
-      value: 142, 
+      value: 0, 
       description: "Waste issues reported this month", 
       icon: <AlertTriangle className="h-5 w-5" />,
-      trend: { value: 8, isPositive: true },
       color: "waste-yellow" 
     },
     { 
       title: "Collection Rate", 
-      value: "92%", 
+      value: "0%", 
       description: "Waste collection efficiency", 
       icon: <Truck className="h-5 w-5" />,
-      trend: { value: 3, isPositive: true },
       color: "waste-green" 
     },
     { 
       title: "Active Users", 
-      value: 1245, 
+      value: 0, 
       description: "Engaged residents and officials", 
       icon: <Calendar className="h-5 w-5" />,
-      trend: { value: 15, isPositive: true },
       color: "waste-blue" 
     },
   ];

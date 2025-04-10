@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import { useToast } from "@/components/ui/use-toast";
@@ -10,10 +10,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, Bell, Lock } from "lucide-react";
+import { Bell, Lock, Shield, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Loader2, AlertCircle } from "lucide-react";
 
 const Settings = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   
   const [currentPassword, setCurrentPassword] = useState("");
@@ -25,6 +26,44 @@ const Settings = () => {
   const [smsNotifications, setSmsNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+  
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  // Fetch active sessions
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchSessions();
+    }
+  }, [isAuthenticated, user]);
+
+  const fetchSessions = async () => {
+    try {
+      setIsLoadingSessions(true);
+      const { data, error } = await supabase.auth.admin.listUserSessions(user!.id);
+      
+      if (error) {
+        console.error("Error fetching sessions:", error);
+        toast({
+          title: "Failed to load sessions",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else if (data) {
+        setSessions(data);
+      }
+    } catch (error: any) {
+      console.error("Session fetch error:", error);
+      toast({
+        title: "Error loading sessions",
+        description: "Could not retrieve your active sessions.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -74,15 +113,78 @@ const Settings = () => {
   const handleSaveNotificationSettings = async () => {
     setIsSavingNotifications(true);
     
-    // Simulate saving
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Simulate saving to Supabase
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      toast({
+        title: "Notification preferences updated",
+        description: "Your notification settings have been saved.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error saving preferences",
+        description: error.message || "Failed to save notification preferences.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingNotifications(false);
+    }
+  };
+  
+  const handleSignOutSession = async (sessionId: string) => {
+    try {
+      const { error } = await supabase.auth.admin.signOut(sessionId);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Refresh sessions list
+      fetchSessions();
+      
+      toast({
+        title: "Session signed out",
+        description: "The selected session has been terminated.",
+      });
+    } catch (error: any) {
+      console.error("Session signout error:", error);
+      toast({
+        title: "Error signing out session",
+        description: error.message || "Failed to sign out the session. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
     
-    toast({
-      title: "Notification preferences updated",
-      description: "Your notification settings have been saved.",
-    });
-    
-    setIsSavingNotifications(false);
+    try {
+      // Delete user from Supabase Auth
+      const { error } = await supabase.auth.admin.deleteUser(user!.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Sign out after successful deletion
+      await logout();
+      
+      toast({
+        title: "Account deleted",
+        description: "Your account has been permanently deleted.",
+      });
+      
+    } catch (error: any) {
+      console.error("Account deletion error:", error);
+      toast({
+        title: "Error deleting account",
+        description: error.message || "Failed to delete your account. Please try again.",
+        variant: "destructive",
+      });
+      setIsDeletingAccount(false);
+    }
   };
 
   if (!isAuthenticated || !user) {
@@ -166,7 +268,14 @@ const Settings = () => {
                     type="submit" 
                     disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
                   >
-                    {isChangingPassword ? "Changing Password..." : "Change Password"}
+                    {isChangingPassword ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Changing Password...
+                      </>
+                    ) : (
+                      "Change Password"
+                    )}
                   </Button>
                 </CardFooter>
               </form>
@@ -219,7 +328,14 @@ const Settings = () => {
                   onClick={handleSaveNotificationSettings}
                   disabled={isSavingNotifications}
                 >
-                  {isSavingNotifications ? "Saving..." : "Save Preferences"}
+                  {isSavingNotifications ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Preferences"
+                  )}
                 </Button>
               </CardFooter>
             </Card>
@@ -237,38 +353,97 @@ const Settings = () => {
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between space-x-2">
                   <div>
-                    <h4 className="font-medium">Two-Factor Authentication</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Add an extra layer of security to your account
-                    </p>
-                  </div>
-                  <Button variant="outline">
-                    Enable
-                  </Button>
-                </div>
-                
-                <div className="flex items-center justify-between space-x-2">
-                  <div>
                     <h4 className="font-medium">Session Management</h4>
                     <p className="text-sm text-muted-foreground">
                       View and manage your active sessions
                     </p>
                   </div>
-                  <Button variant="outline">
-                    View Sessions
+                  <Button 
+                    variant="outline" 
+                    onClick={fetchSessions}
+                    disabled={isLoadingSessions}
+                  >
+                    {isLoadingSessions ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      "Refresh Sessions"
+                    )}
                   </Button>
                 </div>
                 
-                <div className="flex items-center justify-between space-x-2">
+                {sessions.length > 0 ? (
+                  <div className="space-y-2">
+                    {sessions.map((session) => (
+                      <div key={session.id} className="flex items-center justify-between p-3 border rounded-md">
+                        <div>
+                          <p className="font-medium">{session.user_agent || "Unknown device"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Last active: {new Date(session.last_active_at).toLocaleString()}
+                          </p>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleSignOutSession(session.id)}
+                        >
+                          Sign Out
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No active sessions found.</p>
+                )}
+                
+                <div className="flex items-center justify-between space-x-2 pt-4">
                   <div>
-                    <h4 className="font-medium">Delete Account</h4>
+                    <h4 className="font-medium text-red-500">Delete Account</h4>
                     <p className="text-sm text-muted-foreground">
                       Permanently delete your account and all data
                     </p>
                   </div>
-                  <Button variant="destructive">
-                    Delete Account
-                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">
+                        Delete Account
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          <div className="flex items-center">
+                            <AlertCircle className="h-5 w-5 mr-2 text-red-500" />
+                            Delete Account Permanently
+                          </div>
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your account
+                          and remove all your data from our servers.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteAccount}
+                          disabled={isDeletingAccount}
+                          className="bg-red-500 hover:bg-red-600"
+                        >
+                          {isDeletingAccount ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Deleting...
+                            </>
+                          ) : (
+                            "Yes, delete my account"
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>

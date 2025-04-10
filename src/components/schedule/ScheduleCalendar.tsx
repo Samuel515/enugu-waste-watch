@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +42,8 @@ const ScheduleCalendar = () => {
     
     return MOCK_SCHEDULE.some(
       (schedule) =>
+        schedule.date &&
+        date &&
         schedule.date.getDate() === date.getDate() &&
         schedule.date.getMonth() === date.getMonth() &&
         schedule.date.getFullYear() === date.getFullYear()
@@ -105,7 +108,7 @@ const ScheduleCalendar = () => {
                   components={{
                     DayContent: (props: DayContentProps) => (
                       <div className="relative w-full h-full flex items-center justify-center">
-                        <div>{props.day}</div>
+                        <div>{props.date?.getDate()}</div>
                         {renderDateCell(props.date)}
                       </div>
                     ),

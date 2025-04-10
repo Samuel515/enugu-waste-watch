@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,56 +11,29 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, MoreVertical, CheckCircle, AlertTriangle, Clock, Filter } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Mock data for reports
-const MOCK_REPORTS = [
-  {
-    id: 1,
-    title: "Overflowing bin near market",
-    location: "Main Market, Ogui Road",
-    status: "pending",
-    date: "2025-04-08T09:30:00",
-    type: "overflow",
-  },
-  {
-    id: 2,
-    title: "Illegal dumping by roadside",
-    location: "Independence Layout, Enugu",
-    status: "in-progress",
-    date: "2025-04-07T14:20:00",
-    type: "illegal",
-  },
-  {
-    id: 3,
-    title: "Missed collection on schedule",
-    location: "Presidential Road, Enugu",
-    status: "completed",
-    date: "2025-04-06T11:15:00",
-    type: "missed",
-  },
-  {
-    id: 4,
-    title: "Broken waste bin needs repair",
-    location: "New Haven, Enugu",
-    status: "pending",
-    date: "2025-04-05T16:45:00",
-    type: "damage",
-  },
-];
-
-interface ReportCardProps {
-  report: {
-    id: number;
-    title: string;
-    location: string;
-    status: string;
-    date: string;
-    type: string;
-  };
-  userRole: string;
+interface Report {
+  id: string;
+  title: string;
+  location: string;
+  status: string;
+  created_at: string;
+  waste_type: string;
+  user_id: string;
 }
 
-const ReportCard = ({ report, userRole }: ReportCardProps) => {
+interface ReportCardProps {
+  report: Report;
+  userRole: string;
+  onStatusUpdate?: (id: string, newStatus: string) => void;
+}
+
+const ReportCard = ({ report, userRole, onStatusUpdate }: ReportCardProps) => {
+  const navigate = useNavigate();
+  
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -97,9 +71,19 @@ const ReportCard = ({ report, userRole }: ReportCardProps) => {
         return null;
     }
   };
+  
+  const handleViewReport = () => {
+    navigate(`/reports/${report.id}`);
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    if (onStatusUpdate) {
+      onStatusUpdate(report.id, newStatus);
+    }
+  };
 
   return (
-    <div className="flex items-start justify-between p-4 border-b last:border-0">
+    <div className="flex items-start justify-between p-4 border-b last:border-0 cursor-pointer hover:bg-gray-50" onClick={handleViewReport}>
       <div className="space-y-1">
         <div className="flex items-center space-x-2">
           <h4 className="font-medium text-sm">{report.title}</h4>
@@ -110,22 +94,49 @@ const ReportCard = ({ report, userRole }: ReportCardProps) => {
           {report.location}
         </div>
         <div className="text-xs text-muted-foreground">
-          Reported on {formatDate(report.date)}
+          Reported on {formatDate(report.created_at)}
         </div>
       </div>
 
       {userRole !== "resident" && (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
             <Button variant="ghost" size="icon">
               <MoreVertical className="h-4 w-4" />
               <span className="sr-only">Actions</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>View details</DropdownMenuItem>
-            <DropdownMenuItem>Update status</DropdownMenuItem>
-            <DropdownMenuItem>Assign to team</DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { 
+              e.stopPropagation();
+              handleViewReport();
+            }}>
+              View details
+            </DropdownMenuItem>
+            {report.status !== "pending" && (
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                handleStatusChange("pending");
+              }}>
+                Mark as Pending
+              </DropdownMenuItem>
+            )}
+            {report.status !== "in-progress" && (
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                handleStatusChange("in-progress");
+              }}>
+                Mark as In Progress
+              </DropdownMenuItem>
+            )}
+            {report.status !== "completed" && (
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                handleStatusChange("completed");
+              }}>
+                Mark as Completed
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       )}
@@ -139,10 +150,85 @@ interface RecentReportsProps {
 
 const RecentReports = ({ userRole }: RecentReportsProps) => {
   const [filter, setFilter] = useState("all");
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
   
+  useEffect(() => {
+    fetchReports();
+  }, [user, userRole]);
+  
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      
+      let query = supabase
+        .from('reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (userRole === 'resident' && user) {
+        // Residents can only see their own reports
+        query = query.eq('user_id', user.id);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        setReports(data as Report[]);
+      }
+    } catch (error: any) {
+      console.error("Error fetching reports:", error);
+      toast({
+        title: "Error loading reports",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleStatusUpdate = async (id: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('reports')
+        .update({ status: newStatus })
+        .eq('id', id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Optimistically update the UI
+      setReports(prevReports => 
+        prevReports.map(report => 
+          report.id === id ? { ...report, status: newStatus } : report
+        )
+      );
+      
+      toast({
+        title: "Status updated",
+        description: `Report status has been updated to ${newStatus}`,
+      });
+    } catch (error: any) {
+      console.error("Error updating status:", error);
+      toast({
+        title: "Error updating status",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredReports = filter === "all"
-    ? MOCK_REPORTS
-    : MOCK_REPORTS.filter(report => report.status === filter);
+    ? reports
+    : reports.filter(report => report.status === filter);
 
   return (
     <Card className="col-span-1 md:col-span-2">
@@ -171,18 +257,29 @@ const RecentReports = ({ userRole }: RecentReportsProps) => {
         </DropdownMenu>
       </CardHeader>
       <CardContent className="p-0">
-        <div>
-          {filteredReports.length > 0 ? (
-            filteredReports.map(report => (
-              <ReportCard key={report.id} report={report} userRole={userRole} />
-            ))
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8">
-              <AlertTriangle className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-muted-foreground">No reports found</p>
-            </div>
-          )}
-        </div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <p className="text-muted-foreground">Loading reports...</p>
+          </div>
+        ) : (
+          <div>
+            {filteredReports.length > 0 ? (
+              filteredReports.map(report => (
+                <ReportCard 
+                  key={report.id} 
+                  report={report} 
+                  userRole={userRole} 
+                  onStatusUpdate={handleStatusUpdate}
+                />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8">
+                <AlertTriangle className="h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">No reports found</p>
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

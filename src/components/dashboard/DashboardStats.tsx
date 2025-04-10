@@ -1,7 +1,9 @@
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpRight, Truck, AlertTriangle, Calendar, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StatsCardProps {
   title: string;
@@ -48,7 +50,76 @@ interface DashboardStatsProps {
 }
 
 const DashboardStats = ({ userRole }: DashboardStatsProps) => {
-  // Different stats based on user role, all showing zero activity
+  const [reportsMade, setReportsMade] = useState(0);
+  const [activeReports, setActiveReports] = useState(0);
+  const [collectionsToday, setCollectionsToday] = useState(0);
+  const [areasCovered, setAreasCovered] = useState(0);
+  const [totalReports, setTotalReports] = useState(0);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Load stats from database
+    const loadStats = async () => {
+      try {
+        // Reports made by the current resident
+        if (userRole === "resident") {
+          const { data, error } = await supabase
+            .from('reports')
+            .select('count', { count: 'exact' })
+            .eq('user_id', user.id);
+          
+          if (!error && data) {
+            setReportsMade(data.length);
+          }
+        }
+        
+        // For officials and admins
+        if (userRole === "official" || userRole === "admin") {
+          // Active (pending) reports
+          const { data: pendingData, error: pendingError } = await supabase
+            .from('reports')
+            .select('count', { count: 'exact' })
+            .eq('status', 'pending');
+          
+          if (!pendingError && pendingData) {
+            setActiveReports(pendingData.length);
+          }
+          
+          // Total reports
+          const { data: totalData, error: totalError } = await supabase
+            .from('reports')
+            .select('count', { count: 'exact' });
+          
+          if (!totalError && totalData) {
+            setTotalReports(totalData.length);
+          }
+          
+          // Collections today (this would be implemented with a real schedule system)
+          setCollectionsToday(0);
+          
+          // Areas covered
+          const { data: areasData, error: areasError } = await supabase
+            .from('profiles')
+            .select('area')
+            .not('area', 'is', null);
+          
+          if (!areasError && areasData) {
+            // Get unique areas
+            const uniqueAreas = new Set(areasData.map(profile => profile.area));
+            setAreasCovered(uniqueAreas.size);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading dashboard stats:", error);
+      }
+    };
+    
+    loadStats();
+  }, [user, userRole]);
+
+  // Different stats based on user role
   const residentStats = [
     { 
       title: "Collection Schedule", 
@@ -59,7 +130,7 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
     },
     { 
       title: "Reports Made", 
-      value: 0, 
+      value: reportsMade, 
       description: "Waste issues you've reported", 
       icon: <AlertTriangle className="h-5 w-5" />,
       color: "waste-yellow" 
@@ -76,21 +147,21 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
   const officialStats = [
     { 
       title: "Active Reports", 
-      value: 0, 
+      value: activeReports, 
       description: "Unresolved waste reports", 
       icon: <AlertTriangle className="h-5 w-5" />,
       color: "waste-yellow" 
     },
     { 
       title: "Collections Today", 
-      value: 0, 
+      value: collectionsToday, 
       description: "Scheduled waste pickups", 
       icon: <Truck className="h-5 w-5" />,
       color: "waste-green" 
     },
     { 
       title: "Areas Covered", 
-      value: 0, 
+      value: areasCovered, 
       description: "Districts with active collection", 
       icon: <Calendar className="h-5 w-5" />,
       color: "waste-blue" 
@@ -100,7 +171,7 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
   const adminStats = [
     { 
       title: "Total Reports", 
-      value: 0, 
+      value: totalReports, 
       description: "Waste issues reported this month", 
       icon: <AlertTriangle className="h-5 w-5" />,
       color: "waste-yellow" 

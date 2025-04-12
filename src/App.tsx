@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Report from "./pages/Report";
+import Reports from "./pages/Reports";
 import Schedule from "./pages/Schedule";
 import Notifications from "./pages/Notifications";
 import ManageUsers from "./pages/ManageUsers";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/report" element={<Report />} />
+              <Route path="/reports" element={<Reports />} />
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/manage-users" element={<ManageUsers />} />

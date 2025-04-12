@@ -12,6 +12,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
   const reports = [
     {
       id: "WR-2023-06-12",
+      title: "Overflowing waste bin",
       location: "Independence Layout",
       status: "in-progress",
       date: "2023-06-12",
@@ -19,6 +20,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
     },
     {
       id: "WR-2023-06-08",
+      title: "Illegal dumping near school",
       location: "New Haven",
       status: "resolved",
       date: "2023-06-08",
@@ -26,6 +28,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
     },
     {
       id: "WR-2023-05-30",
+      title: "Waste collection delayed",
       location: "Trans-Ekulu",
       status: "pending",
       date: "2023-05-30",
@@ -59,7 +62,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
                 >
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium">{report.id}</span>
+                      <span className="font-medium">{report.title}</span>
                       <Badge
                         className={`text-[10px] px-2 py-0 ${
                           report.status === "resolved"
@@ -69,10 +72,10 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
                             : "bg-amber-100 text-amber-800"
                         }`}
                       >
-                        {report.status === "in-progress" ? "in-progress" : report.status}
+                        {report.status}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{report.description}</p>
+                    <p className="text-sm text-muted-foreground">{report.id}</p>
                     <div className="text-xs text-muted-foreground mt-1">
                       {report.location} · {report.date}
                     </div>
@@ -89,7 +92,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
               ))}
               <div className="text-center pt-2">
                 <Link
-                  to="/dashboard"
+                  to="/reports"
                   className="text-sm text-primary hover:underline"
                 >
                   View all reports

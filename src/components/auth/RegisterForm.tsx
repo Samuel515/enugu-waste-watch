@@ -251,8 +251,8 @@ const RegisterForm = () => {
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <div className="relative flex items-center">
-                <div className="absolute left-3 z-10 flex items-center gap-1 text-muted-foreground">
-                  <Phone className="h-4 w-4" />
+                <div className="absolute inset-y-0 left-0 flex items-center justify-center w-14 border-r bg-muted text-muted-foreground rounded-l-md">
+                  <Phone className="h-4 w-4 mr-1" />
                   <span className="text-sm">+234</span>
                 </div>
                 <Input
@@ -261,9 +261,9 @@ const RegisterForm = () => {
                   placeholder="8012345678"
                   value={phoneNumber}
                   onChange={(e) => {
-                    // Only allow up to 11 digits and remove non-digit characters
+                    // Only allow up to 10 digits and remove non-digit characters
                     const value = e.target.value.replace(/\D/g, '');
-                    if (value.length <= 11) {
+                    if (value.length <= 10) {
                       setPhoneNumber(value);
                     }
                   }}
@@ -271,7 +271,7 @@ const RegisterForm = () => {
                   disabled={isLoading}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Format: +234 (Nigerian code) followed by your number</p>
+              <p className="text-xs text-muted-foreground">Format: Nigerian mobile number without the country code</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

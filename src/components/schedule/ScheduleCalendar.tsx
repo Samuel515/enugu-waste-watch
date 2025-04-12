@@ -95,19 +95,18 @@ const ScheduleCalendar = () => {
   const sortedEvents = [...events].sort((a, b) => a.date.getTime() - b.date.getTime());
   
   // Custom day renderer that adds indicator for events
-  const renderDay = (props: React.HTMLAttributes<HTMLDivElement>) => {
-    const day = props["aria-label"];
+  const renderDay = (day: any) => {
+    const date = day.date;
     
-    if (!day) return <div {...props} />;
+    if (!date) return <div className={day.className}>{day.day}</div>;
     
-    const dateStr = day.split(" ").slice(0, 3).join(" ");
     const hasEvent = events.some((event) => 
-      event.date.toDateString() === new Date(dateStr).toDateString()
+      event.date.toDateString() === date.toDateString()
     );
     
     return (
-      <div {...props} className={props.className}>
-        {props.children}
+      <div className={day.className}>
+        {day.day}
         {hasEvent && (
           <div className="h-1.5 w-1.5 bg-waste-green rounded-full absolute bottom-1 left-1/2 transform -translate-x-1/2" />
         )}
@@ -151,8 +150,29 @@ const ScheduleCalendar = () => {
                   setSelectedDate(selectedDate);
                 }}
                 className="rounded-md border w-full"
-                components={{
-                  Day: ({ day, ...props }: any) => renderDay(props)
+                styles={{
+                  day_selected: { color: "white" },
+                  day_today: { color: "var(--foreground)" }
+                }}
+                modifiersStyles={{
+                  selected: {
+                    backgroundColor: "var(--primary)",
+                    color: "white"
+                  },
+                  today: {
+                    backgroundColor: "var(--accent)",
+                    color: "var(--accent-foreground)"
+                  }
+                }}
+                modifiers={{
+                  eventDay: dates => {
+                    return events.some(event => 
+                      dates.some(date => date?.toDateString() === event.date.toDateString())
+                    );
+                  }
+                }}
+                modifiersClassNames={{
+                  eventDay: "relative"
                 }}
               />
             </div>

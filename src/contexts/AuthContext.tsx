@@ -1,14 +1,11 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 
-// Define user roles
 export type UserRole = "resident" | "official" | "admin";
 
-// Define user type
 export interface AppUser {
   id: string;
   name: string;
@@ -18,42 +15,40 @@ export interface AppUser {
   phoneNumber?: string;
 }
 
-// Define auth context type
 interface AuthContextType {
   user: AppUser | null;
   isAuthenticated: boolean;
   session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   signupWithEmail: (name: string, email: string, password: string, role: UserRole, area?: string) => Promise<void>;
-  signupWithPhone: (name: string, phoneNumber: string, password: string, role: UserRole, area?: string) => Promise<void>;
+  signupWithPhone: (name: string, phone: string, password: string, role: UserRole, area?: string) => Promise<void>;
   signInWithPhone: (phoneNumber: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   verifyPhone: (phoneNumber: string, token: string) => Promise<void>;
   logout: () => Promise<void>;
   checkEmailExists: (email: string) => Promise<boolean>;
-  checkPhoneExists: (phoneNumber: string) => Promise<boolean>;
+  checkPhoneExists: (phone: string) => Promise<boolean>;
 }
 
-// Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [needPhoneVerification, setNeedPhoneVerification] = useState(false);
+  const [phone, setPhone] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  
-  // Set up auth state listener
+
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth event:', event);
         
         setSession(session);
         
-        // If session exists, fetch user profile
         if (session?.user) {
           fetchUserProfile(session.user.id);
         } else {
@@ -62,7 +57,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       
@@ -76,7 +70,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  // Fetch user profile from profiles table
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data: profile, error } = await supabase
@@ -105,47 +98,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Check if email exists
-  const checkEmailExists = async (email: string): Promise<boolean> => {
+  const checkEmailExists = async (email: string) => {
     try {
-      const { data, error } = await supabase.auth.admin.listUsers({
-        filter: {
-          email: email
-        }
+      const { data } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
       });
-
-      if (error) {
-        console.error('Error checking email existence:', error);
-        return false;
-      }
-
-      return data && data.length > 0;
+      
+      if (!data || !data.users) return false;
+      
+      return data.users.some(user => 
+        user.email?.toLowerCase() === email.toLowerCase()
+      );
     } catch (error) {
-      console.error('Error checking email existence:', error);
+      console.error("Error checking email existence:", error);
       return false;
     }
   };
 
-  // Check if phone exists
-  const checkPhoneExists = async (phoneNumber: string): Promise<boolean> => {
-    // Format phone number to E.164 format
-    const formattedPhone = formatPhoneNumber(phoneNumber);
-
+  const checkPhoneExists = async (phone: string) => {
     try {
-      const { data, error } = await supabase.auth.admin.listUsers({
-        filter: {
-          phone: formattedPhone
-        }
+      const { data } = await supabase.auth.admin.listUsers({
+        page: 1, 
+        perPage: 1000,
       });
-
-      if (error) {
-        console.error('Error checking phone existence:', error);
-        return false;
-      }
-
-      return data && data.length > 0;
+      
+      if (!data || !data.users) return false;
+      
+      return data.users.some(user => user.phone === phone);
     } catch (error) {
-      console.error('Error checking phone existence:', error);
+      console.error("Error checking phone existence:", error);
       return false;
     }
   };
@@ -179,16 +161,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signupWithEmail = async (name: string, email: string, password: string, role: UserRole, area?: string) => {
+    setIsLoading(true);
+    
     try {
-      // Check if email already exists
       const emailExists = await checkEmailExists(email);
-      
       if (emailExists) {
         toast({
-          title: "Signup failed",
-          description: "This email is already registered. Please use a different email or try logging in.",
-          variant: "destructive"
+          title: "Error",
+          description: "This email is already registered. Please use another email or login instead.",
+          variant: "destructive",
         });
+        setIsLoading(false);
         return;
       }
       
@@ -199,51 +182,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           data: {
             name,
             role,
-            area
-          }
-        }
+            area,
+          },
+        },
       });
       
       if (error) {
-        toast({
-          title: "Signup failed",
-          description: error.message,
-          variant: "destructive",
-        });
         throw error;
       }
-
-      toast({
-        title: "Signup Successful",
-        description: "Please check your email to confirm your account. You'll need to confirm your email before logging in."
-      });
       
-      // Redirect back to auth page with email prefilled
-      navigate(`/auth?tab=login&email=${encodeURIComponent(email)}`);
+      if (data.user) {
+        toast({
+          title: "Success",
+          description: "Your account has been created successfully.",
+        });
+      }
     } catch (error: any) {
       console.error("Signup error:", error);
-      throw error;
+      toast({
+        title: "Signup failed",
+        description: error.message || "Failed to create your account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const signupWithPhone = async (name: string, phoneNumber: string, password: string, role: UserRole, area?: string) => {
-    // Format phone number to E.164 format
-    const formattedPhone = formatPhoneNumber(phoneNumber);
+  const signupWithPhone = async (name: string, phone: string, password: string, role: UserRole, area?: string) => {
+    setIsLoading(true);
     
     try {
-      // Check if phone already exists
-      const phoneExists = await checkPhoneExists(formattedPhone);
+      const formattedPhone = phone.startsWith('0')
+        ? '+234' + phone.substring(1)
+        : phone.startsWith('+234')
+          ? phone
+          : '+234' + phone;
       
+      const phoneExists = await checkPhoneExists(formattedPhone);
       if (phoneExists) {
         toast({
-          title: "Signup failed",
-          description: "This phone number is already registered. Please use a different number or try logging in.",
-          variant: "destructive"
+          title: "Error",
+          description: "This phone number is already registered. Please use another number or login instead.",
+          variant: "destructive",
         });
+        setIsLoading(false);
         return;
       }
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         phone: formattedPhone,
         password,
         options: {
@@ -251,30 +238,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             name,
             role,
             area,
-            phone_number: formattedPhone
-          }
-        }
+          },
+        },
       });
       
       if (error) {
-        toast({
-          title: "Phone signup failed",
-          description: error.message,
-          variant: "destructive",
-        });
         throw error;
       }
-
-      toast({
-        title: "Phone Signup Successful",
-        description: "Please verify your phone number with the code sent to continue."
-      });
       
-      // Navigate to verification page with phone number as state
-      navigate(`/auth?tab=verify&phone=${encodeURIComponent(formattedPhone)}`);
+      if (data.user) {
+        setNeedPhoneVerification(true);
+        setPhone(formattedPhone);
+        toast({
+          title: "Verification required",
+          description: "Please enter the verification code sent to your phone.",
+        });
+      }
     } catch (error: any) {
       console.error("Phone signup error:", error);
-      throw error;
+      toast({
+        title: "Signup failed",
+        description: error.message || "Failed to create your account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -308,7 +296,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signInWithPhone = async (phoneNumber: string, password: string) => {
-    // Format phone number to E.164 format
     const formattedPhone = formatPhoneNumber(phoneNumber);
     
     try {
@@ -411,7 +398,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         description: "You have been logged out successfully"
       });
       
-      // Redirect to homepage after logout
       navigate("/");
     } catch (error: any) {
       console.error("Logout error:", error);
@@ -419,42 +405,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Helper function to format phone number to E.164 format
   const formatPhoneNumber = (phoneNumber: string): string => {
-    // Remove any non-digit characters
     const digitsOnly = phoneNumber.replace(/\D/g, '');
     
-    // If starts with 0, remove it and add +234
     if (digitsOnly.startsWith('0')) {
       return '+234' + digitsOnly.substring(1);
     }
     
-    // If it doesn't start with 0, just add +234
     return '+234' + digitsOnly;
   };
 
+  const value = {
+    user,
+    session,
+    isAuthenticated: !!user,
+    login,
+    signupWithEmail,
+    signupWithPhone,
+    signInWithPhone,
+    signInWithGoogle,
+    signInWithApple,
+    verifyPhone,
+    logout,
+    checkEmailExists,
+    checkPhoneExists
+  };
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session, 
-      isAuthenticated: !!user, 
-      login, 
-      signupWithEmail,
-      signupWithPhone,
-      signInWithPhone,
-      signInWithGoogle,
-      signInWithApple,
-      verifyPhone,
-      logout,
-      checkEmailExists,
-      checkPhoneExists
-    }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {needPhoneVerification && phone ? (
+        <PhoneVerification phone={phone} setNeedPhoneVerification={setNeedPhoneVerification} />
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

@@ -1,13 +1,12 @@
 
 import { useState } from "react";
-import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Mail, MapPin, Phone } from "lucide-react";
@@ -122,16 +121,17 @@ const Profile = () => {
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="relative flex items-center">
                   <div className="absolute inset-y-0 left-0 flex items-center justify-center w-14 border-r bg-muted text-muted-foreground rounded-l-md">
-                    +234
+                    <Phone className="h-4 w-4 mr-1" />
+                    <span className="text-sm">+234</span>
                   </div>
                   <Input 
                     id="phone"
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => {
-                      // Only allow up to 11 digits and remove non-digit characters
+                      // Only allow up to 10 digits and remove non-digit characters
                       const value = e.target.value.replace(/\D/g, '');
-                      if (value.length <= 11) {
+                      if (value.length <= 10) {
                         setPhoneNumber(value);
                       }
                     }}

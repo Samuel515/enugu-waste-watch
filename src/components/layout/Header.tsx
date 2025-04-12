@@ -38,15 +38,25 @@ const Header = () => {
   const allMenuItems = [...menuItems, 
                          ...(user?.role === "official" ? officialMenuItems : []),
                          ...(user?.role === "admin" ? adminMenuItems : [])];
+  
+  // Determine if page requires auth to prevent homepage routing
+  const isAuthenticatedPage = user && window.location.pathname !== "/";
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link to="/" className="flex items-center gap-2">
-            <Leaf className="h-6 w-6 text-waste-green" />
-            <span className="text-xl font-bold xs:text-[8px] sm:text-small md:text-lg lg:text-xl">Enugu Waste Watch</span>
-          </Link>
+          {isAuthenticatedPage ? (
+            <div className="flex items-center gap-2">
+              <Leaf className="h-6 w-6 text-waste-green" />
+              <span className="text-lg font-bold xs:text-xs sm:text-sm md:text-lg lg:text-xl">Enugu Waste Watch</span>
+            </div>
+          ) : (
+            <Link to="/" className="flex items-center gap-2">
+              <Leaf className="h-6 w-6 text-waste-green" />
+              <span className="text-lg font-bold xs:text-xs sm:text-sm md:text-lg lg:text-xl">Enugu Waste Watch</span>
+            </Link>
+          )}
         </div>
 
         {/* Desktop Navigation */}

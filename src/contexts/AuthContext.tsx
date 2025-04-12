@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
@@ -31,6 +31,8 @@ interface AuthContextType {
   signInWithApple: () => Promise<void>;
   verifyPhone: (phoneNumber: string, token: string) => Promise<void>;
   logout: () => Promise<void>;
+  checkEmailExists: (email: string) => Promise<boolean>;
+  checkPhoneExists: (phoneNumber: string) => Promise<boolean>;
 }
 
 // Create context
@@ -103,6 +105,51 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Check if email exists
+  const checkEmailExists = async (email: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.auth.admin.listUsers({
+        filter: {
+          email: email
+        }
+      });
+
+      if (error) {
+        console.error('Error checking email existence:', error);
+        return false;
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Error checking email existence:', error);
+      return false;
+    }
+  };
+
+  // Check if phone exists
+  const checkPhoneExists = async (phoneNumber: string): Promise<boolean> => {
+    // Format phone number to E.164 format
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+
+    try {
+      const { data, error } = await supabase.auth.admin.listUsers({
+        filter: {
+          phone: formattedPhone
+        }
+      });
+
+      if (error) {
+        console.error('Error checking phone existence:', error);
+        return false;
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Error checking phone existence:', error);
+      return false;
+    }
+  };
+
   const login = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -133,6 +180,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signupWithEmail = async (name: string, email: string, password: string, role: UserRole, area?: string) => {
     try {
+      // Check if email already exists
+      const emailExists = await checkEmailExists(email);
+      
+      if (emailExists) {
+        toast({
+          title: "Signup failed",
+          description: "This email is already registered. Please use a different email or try logging in.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -156,8 +215,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       toast({
         title: "Signup Successful",
-        description: "Please check your email to confirm your account. You'll need to confirm your email before logging in.",
-        duration: 5000,
+        description: "Please check your email to confirm your account. You'll need to confirm your email before logging in."
       });
       
       // Redirect back to auth page with email prefilled
@@ -173,6 +231,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const formattedPhone = formatPhoneNumber(phoneNumber);
     
     try {
+      // Check if phone already exists
+      const phoneExists = await checkPhoneExists(formattedPhone);
+      
+      if (phoneExists) {
+        toast({
+          title: "Signup failed",
+          description: "This phone number is already registered. Please use a different number or try logging in.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const { error } = await supabase.auth.signUp({
         phone: formattedPhone,
         password,
@@ -197,8 +267,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       toast({
         title: "Phone Signup Successful",
-        description: "Please verify your phone number with the code sent to continue.",
-        duration: 5000,
+        description: "Please verify your phone number with the code sent to continue."
       });
       
       // Navigate to verification page with phone number as state
@@ -228,7 +297,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       toast({
         title: "Verification successful",
-        description: "Your phone number has been verified. You are now logged in.",
+        description: "Your phone number has been verified. You are now logged in."
       });
       
       navigate('/dashboard');
@@ -259,7 +328,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       toast({
         title: "Login successful",
-        description: "Welcome back!",
+        description: "Welcome back!"
       });
       
       navigate('/dashboard');
@@ -339,7 +408,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null);
       toast({
         title: "Logged out",
-        description: "You have been logged out successfully",
+        description: "You have been logged out successfully"
       });
       
       // Redirect to homepage after logout
@@ -376,7 +445,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       signInWithGoogle,
       signInWithApple,
       verifyPhone,
-      logout 
+      logout,
+      checkEmailExists,
+      checkPhoneExists
     }}>
       {children}
     </AuthContext.Provider>

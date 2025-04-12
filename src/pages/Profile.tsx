@@ -121,9 +121,8 @@ const Profile = () => {
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="relative flex items-center">
-                  <div className="absolute left-3 z-10 flex items-center gap-1 text-black">
-                    <Phone className="h-4 w-4" />
-                    <span className="text-sm">+234</span>
+                  <div className="absolute inset-y-0 left-0 flex items-center justify-center w-14 border-r bg-muted text-muted-foreground rounded-l-md">
+                    +234
                   </div>
                   <Input 
                     id="phone"

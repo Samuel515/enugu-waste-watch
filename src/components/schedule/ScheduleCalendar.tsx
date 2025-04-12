@@ -1,227 +1,239 @@
 
-import { useState } from "react";
-import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Truck, MapPin, Clock } from "lucide-react";
-import { DayContentProps } from "react-day-picker";
+import { useState, useEffect } from "react";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Calendar as CalendarIcon, List } from "lucide-react";
 
-// Mock data
-const MOCK_SCHEDULE = [
-  {
-    date: new Date(2025, 3, 10), // April 10, 2025
-    areas: [
-      { name: "Independence Layout", time: "09:00 AM - 12:00 PM" },
-      { name: "New Haven", time: "01:00 PM - 04:00 PM" },
-    ],
-  },
-  {
-    date: new Date(2025, 3, 12), // April 12, 2025
-    areas: [
-      { name: "Achara Layout", time: "08:00 AM - 11:00 AM" },
-      { name: "Trans Ekulu", time: "01:00 PM - 04:00 PM" },
-    ],
-  },
-  {
-    date: new Date(2025, 3, 15), // April 15, 2025
-    areas: [
-      { name: "GRA", time: "09:00 AM - 12:00 PM" },
-      { name: "Abakpa Nike", time: "02:00 PM - 05:00 PM" },
-    ],
-  },
-];
+interface CollectionEvent {
+  id: number;
+  date: Date;
+  area: string;
+  time: string;
+  type: string;
+}
 
 const ScheduleCalendar = () => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [events, setEvents] = useState<CollectionEvent[]>([]);
   const [view, setView] = useState<"calendar" | "list">("calendar");
-
-  // Function to check if a date has a schedule
-  const hasSchedule = (date: Date | undefined) => {
-    if (!date) return false;
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  
+  // Mock data for waste collection events
+  useEffect(() => {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
     
-    return MOCK_SCHEDULE.some(
-      (schedule) =>
-        schedule.date.getDate() === date.getDate() &&
-        schedule.date.getMonth() === date.getMonth() &&
-        schedule.date.getFullYear() === date.getFullYear()
-    );
-  };
-
-  // Function to get schedule for a specific date
-  const getScheduleForDate = (date: Date | undefined) => {
-    if (!date) return undefined;
+    const mockEvents: CollectionEvent[] = [
+      {
+        id: 1,
+        date: new Date(currentYear, currentMonth, 15),
+        area: "Independence Layout",
+        time: "9:00 AM - 11:00 AM",
+        type: "General Waste"
+      },
+      {
+        id: 2,
+        date: new Date(currentYear, currentMonth, 16),
+        area: "New Haven",
+        time: "1:00 PM - 3:00 PM",
+        type: "Recyclables"
+      },
+      {
+        id: 3,
+        date: new Date(currentYear, currentMonth, 17),
+        area: "Trans-Ekulu",
+        time: "10:00 AM - 12:00 PM",
+        type: "General Waste"
+      },
+      {
+        id: 4,
+        date: new Date(currentYear, currentMonth, 18),
+        area: "Ogui Road",
+        time: "8:00 AM - 10:00 AM",
+        type: "General Waste"
+      },
+      {
+        id: 5,
+        date: new Date(currentYear, currentMonth, 19),
+        area: "GRA",
+        time: "2:00 PM - 4:00 PM",
+        type: "Recyclables"
+      },
+      {
+        id: 6,
+        date: new Date(currentYear, currentMonth, 20),
+        area: "Uwani",
+        time: "9:00 AM - 11:00 AM",
+        type: "General Waste"
+      },
+      {
+        id: 7,
+        date: new Date(currentYear, currentMonth, 22),
+        area: "Abakpa",
+        time: "1:00 PM - 3:00 PM",
+        type: "General Waste"
+      },
+      {
+        id: 8,
+        date: new Date(currentYear, currentMonth, 24),
+        area: "Coal Camp",
+        time: "10:00 AM - 12:00 PM",
+        type: "Recyclables"
+      }
+    ];
     
-    return MOCK_SCHEDULE.find(
-      (schedule) =>
-        schedule.date.getDate() === date.getDate() &&
-        schedule.date.getMonth() === date.getMonth() &&
-        schedule.date.getFullYear() === date.getFullYear()
+    setEvents(mockEvents);
+  }, []);
+  
+  const eventsForSelectedDate = events.filter(
+    (event) => selectedDate && event.date.toDateString() === selectedDate.toDateString()
+  );
+  
+  // Sort events by date (most recent first)
+  const sortedEvents = [...events].sort((a, b) => a.date.getTime() - b.date.getTime());
+  
+  // Custom day renderer that adds indicator for events
+  const renderDay = (props: React.HTMLAttributes<HTMLDivElement>) => {
+    const day = props["aria-label"];
+    
+    if (!day) return <div {...props} />;
+    
+    const dateStr = day.split(" ").slice(0, 3).join(" ");
+    const hasEvent = events.some((event) => 
+      event.date.toDateString() === new Date(dateStr).toDateString()
     );
-  };
-
-  // Function to render date cell
-  const renderDateCell = (props: DayContentProps) => {
-    const isScheduled = props.date && hasSchedule(props.date);
     
     return (
-      <div className="relative w-full h-full flex items-center justify-center">
-        <div className={`w-7 h-7 flex items-center justify-center rounded-full ${isScheduled ? 'bg-waste-green/20' : ''}`}>
-          {props.day}
-        </div>
+      <div {...props} className={props.className}>
+        {props.children}
+        {hasEvent && (
+          <div className="h-1.5 w-1.5 bg-waste-green rounded-full absolute bottom-1 left-1/2 transform -translate-x-1/2" />
+        )}
       </div>
     );
   };
 
-  // Sort schedule by date for list view
-  const sortedSchedule = [...MOCK_SCHEDULE].sort(
-    (a, b) => a.date.getTime() - b.date.getTime()
-  );
-
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-        <div className="mb-4 sm:mb-0">
-          <CardTitle>Collection Schedule</CardTitle>
-          <CardDescription>
-            View upcoming waste collection in your area
-          </CardDescription>
+    <Card className="w-full">
+      <CardContent className="p-6">
+        <div className="flex flex-col xs:flex-row items-center justify-between mb-6 gap-2">
+          <h3 className="text-xl font-medium">Collection Schedule</h3>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={view === "calendar" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("calendar")}
+            >
+              <CalendarIcon className="h-4 w-4 mr-1" />
+              Calendar
+            </Button>
+            <Button
+              variant={view === "list" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("list")}
+            >
+              <List className="h-4 w-4 mr-1" />
+              List View
+            </Button>
+          </div>
         </div>
-        <div>
-          <Tabs value={view} onValueChange={(v) => setView(v as "calendar" | "list")}>
-            <TabsList className="grid grid-cols-2 w-[200px]">
-              <TabsTrigger value="calendar">Calendar</TabsTrigger>
-              <TabsTrigger value="list">List View</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </CardHeader>
-      <CardContent className="p-4">
-        <Tabs value={view} className="w-full">
-          <TabsContent value="calendar" className="mt-0">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="rounded-md border w-full"
-                  components={{
-                    DayContent: renderDateCell,
-                  }}
-                />
-              </div>
-              <div>
-                {selectedDate && (
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">
-                      {selectedDate.toLocaleDateString("en-US", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </h3>
-                    
-                    {getScheduleForDate(selectedDate) ? (
-                      <div className="space-y-4">
-                        <div>
-                          <Badge className="bg-waste-green mb-2">
-                            <Truck className="h-3 w-3 mr-1" />
-                            Collection Day
-                          </Badge>
-                          <p className="text-sm text-muted-foreground">
-                            Waste collection is scheduled for the areas listed below.
-                          </p>
-                        </div>
-                        
-                        <div className="space-y-3">
-                          {getScheduleForDate(selectedDate)?.areas.map((area, index) => (
-                            <div
-                              key={index}
-                              className="p-3 border rounded-md bg-secondary/40"
-                            >
-                              <div className="flex items-center mb-1">
-                                <MapPin className="h-4 w-4 text-waste-green mr-1" />
-                                <span className="font-medium">{area.name}</span>
-                              </div>
-                              <div className="flex items-center text-sm text-muted-foreground">
-                                <Clock className="h-3 w-3 mr-1" />
-                                <span>{area.time}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        
-                        <div className="text-sm text-muted-foreground">
-                          <p>
-                            Please ensure your waste is properly bagged and placed in the
-                            designated bins before the collection time.
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-10">
-                        <p className="text-muted-foreground">
-                          No waste collection scheduled for this date.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+        
+        {view === "calendar" && (
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="w-full md:w-auto">
+              <CalendarComponent
+                mode="single"
+                selected={date}
+                onSelect={(selectedDate) => {
+                  setDate(selectedDate);
+                  setSelectedDate(selectedDate);
+                }}
+                className="rounded-md border w-full"
+                components={{
+                  Day: ({ day, ...props }: any) => renderDay(props)
+                }}
+              />
             </div>
-          </TabsContent>
-          
-          <TabsContent value="list" className="mt-0">
-            <div className="space-y-4">
-              {sortedSchedule.length > 0 ? (
-                sortedSchedule.map((schedule, scheduleIndex) => (
-                  <div key={scheduleIndex} className="border rounded-md p-4">
-                    <div className="mb-3">
-                      <h3 className="font-medium">
-                        {schedule.date.toLocaleDateString("en-US", {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </h3>
-                      <Badge className="bg-waste-green mt-1">
-                        <Truck className="h-3 w-3 mr-1" />
-                        Collection Day
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {schedule.areas.map((area, areaIndex) => (
-                        <div
-                          key={areaIndex}
-                          className="p-3 border rounded-md bg-secondary/40"
-                        >
-                          <div className="flex items-center mb-1">
-                            <MapPin className="h-4 w-4 text-waste-green mr-1" />
-                            <span className="font-medium">{area.name}</span>
-                          </div>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Clock className="h-3 w-3 mr-1" />
-                            <span>{area.time}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))
+            
+            <div className="flex-1 border rounded-md p-4">
+              <h3 className="font-medium mb-4">
+                {selectedDate
+                  ? `Events for ${selectedDate.toLocaleDateString("en-US", {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric"
+                    })}`
+                  : "No date selected"}
+              </h3>
+              
+              {!eventsForSelectedDate.length ? (
+                <p className="text-muted-foreground text-sm">
+                  No waste collection scheduled for this date.
+                </p>
               ) : (
-                <div className="text-center py-10">
-                  <p className="text-muted-foreground">
-                    No upcoming waste collections scheduled.
-                  </p>
+                <div className="space-y-4">
+                  {eventsForSelectedDate.map((event) => (
+                    <div
+                      key={event.id}
+                      className="border rounded-md p-3 bg-muted/30"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium">{event.area}</h4>
+                          <p className="text-sm">{event.time}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {event.type}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
+        
+        {view === "list" && (
+          <div className="space-y-4">
+            {sortedEvents.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No upcoming waste collections scheduled.
+              </p>
+            ) : (
+              sortedEvents.map((event) => (
+                <div
+                  key={event.id}
+                  className={`border rounded-md p-4 ${
+                    selectedDate &&
+                    event.date.toDateString() === selectedDate.toDateString()
+                      ? "border-waste-green bg-waste-green/5"
+                      : ""
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium text-waste-green">
+                        {event.date.toLocaleDateString("en-US", {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric"
+                        })}
+                      </p>
+                      <h4 className="font-medium mt-1">{event.area}</h4>
+                      <p className="text-sm">{event.time}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {event.type}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -67,6 +67,9 @@ const Profile = () => {
     return null;
   }
 
+  // Display phone number without the +234 prefix
+  const displayPhoneNumber = user.phoneNumber?.replace('+234', '') || "";
+
   return (
     <Layout requireAuth>
       <div className="container py-8 max-w-3xl">
@@ -191,7 +194,7 @@ const Profile = () => {
                 onClick={() => {
                   setName(user.name || "");
                   setArea(user.area || "");
-                  setPhoneNumber((user.phoneNumber?.replace('+234', '')) || "");
+                  setPhoneNumber(user.phoneNumber?.replace('+234', '') || "");
                 }}
                 disabled={isLoading}
               >

@@ -3,8 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
 
 const PickupSchedule = () => {
+  const { user } = useAuth();
+  const [nextPickupForUserArea, setNextPickupForUserArea] = useState<{
+    id: number;
+    area: string;
+    date: string;
+    time: string;
+  } | null>(null);
+  
   // Mock data for upcoming pickups
   const upcomingPickups = [
     {
@@ -32,12 +42,33 @@ const PickupSchedule = () => {
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
+  // Find next pickup for user's area if user has an area set
+  useEffect(() => {
+    if (user && user.area) {
+      const userAreaPickup = upcomingPickups.find(pickup => 
+        pickup.area.toLowerCase() === user.area.toLowerCase()
+      );
+      
+      if (userAreaPickup) {
+        setNextPickupForUserArea(userAreaPickup);
+      }
+    }
+  }, [user]);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Upcoming Pickups</CardTitle>
       </CardHeader>
       <CardContent>
+        {nextPickupForUserArea && (
+          <div className="mb-4 p-3 border-l-4 border-waste-green bg-waste-green/5 rounded">
+            <p className="font-medium">Next collection in your area:</p>
+            <p className="text-sm text-waste-green">{nextPickupForUserArea.area}</p>
+            <p className="text-xs">{nextPickupForUserArea.date}, {nextPickupForUserArea.time}</p>
+          </div>
+        )}
+        
         {sortedPickups.length === 0 ? (
           <div className="text-center py-6">
             <p className="text-muted-foreground">No upcoming pickups scheduled</p>

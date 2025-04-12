@@ -131,18 +131,17 @@ const ScheduleCalendar = () => {
                 }}
                 className="rounded-md border w-full"
                 modifiersClassNames={{
-                  selected: "bg-primary text-white",
-                  today: "bg-accent text-accent-foreground"
+                  selected: "bg-primary text-primary-foreground",
+                  today: "bg-accent text-accent-foreground",
+                  eventDay: "bg-waste-green/10"
                 }}
                 modifiers={{
                   eventDay: (date) => {
+                    if (!date) return false;
                     return events.some(event => 
-                      date && event.date.toDateString() === date.toDateString()
+                      event.date.toDateString() === date.toDateString()
                     );
                   }
-                }}
-                modifiersClassNames={{
-                  eventDay: "relative"
                 }}
               />
             </div>

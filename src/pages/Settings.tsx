@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
@@ -12,6 +11,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { Lock, Mail, Bell, Shield, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const Settings = () => {
   const { user } = useAuth();
@@ -266,9 +273,30 @@ const Settings = () => {
                     <p className="text-sm text-muted-foreground">
                       Permanently delete your account and all associated data.
                     </p>
-                    <Button variant="destructive" disabled>
-                      Please contact support to delete your account
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="destructive">
+                          <span className="md:inline">Please contact support to delete your account</span>
+                          <span className="md:hidden">Contact support</span>
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Contact Support</DialogTitle>
+                          <DialogDescription>
+                            Please contact our support team to delete your account. All your data will be permanently removed.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex justify-center py-4">
+                          <Button asChild>
+                            <a href="mailto:support@enuguwaste.com" className="flex items-center gap-2">
+                              <Mail className="h-4 w-4" />
+                              Email Support
+                            </a>
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               </CardContent>

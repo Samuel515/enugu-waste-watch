@@ -41,6 +41,13 @@ const PhoneVerification = () => {
     }
   };
 
+  const handleResend = () => {
+    toast({
+      title: "Code resent",
+      description: "A new verification code has been sent to your phone number",
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-4">
@@ -80,7 +87,7 @@ const PhoneVerification = () => {
       </form>
       
       <p className="text-center text-sm text-muted-foreground">
-        Didn't receive a code? <Button variant="link" className="p-0 h-auto">Resend</Button>
+        Didn't receive a code? <Button variant="link" onClick={handleResend} className="p-0 h-auto">Resend</Button>
       </p>
     </div>
   );

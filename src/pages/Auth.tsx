@@ -20,12 +20,12 @@ const Auth = () => {
     window.scrollTo(0, 0);
   }, []);
   
-  // If user is already authenticated, redirect to dashboard
+  // If user is already authenticated and not on the verify tab, redirect to dashboard
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && defaultTab !== "verify") {
       navigate("/dashboard");
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, defaultTab]);
 
   return (
     <Layout>

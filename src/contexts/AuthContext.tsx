@@ -4,7 +4,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
-import PhoneVerification from "@/components/auth/PhoneVerification";
 
 export type UserRole = "resident" | "official" | "admin";
 
@@ -257,6 +256,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (data.user) {
         setNeedPhoneVerification(true);
         setPhone(formattedPhone);
+        
+        // Redirect to verification page with phone number as query param
+        navigate(`/auth?tab=verify&phone=${encodeURIComponent(formattedPhone)}`);
+        
         toast({
           title: "Verification required",
           description: "Please enter the verification code sent to your phone.",
@@ -276,6 +279,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const verifyPhone = async (phoneNumber: string, token: string) => {
     try {
+      console.log("Verifying phone:", phoneNumber, "with token:", token);
+      
       const { error } = await supabase.auth.verifyOtp({
         phone: phoneNumber,
         token,
@@ -441,11 +446,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <AuthContext.Provider value={value}>
-      {needPhoneVerification && phone ? (
-        <PhoneVerification />
-      ) : (
-        children
-      )}
+      {children}
     </AuthContext.Provider>
   );
 };

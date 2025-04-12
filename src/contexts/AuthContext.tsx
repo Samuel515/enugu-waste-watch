@@ -1,8 +1,10 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
+import PhoneVerification from "@/components/auth/PhoneVerification";
 
 export type UserRole = "resident" | "official" | "admin";
 
@@ -100,16 +102,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkEmailExists = async (email: string) => {
     try {
-      const { data } = await supabase.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .limit(1);
       
-      if (!data || !data.users) return false;
+      if (error) {
+        console.error("Error checking email existence:", error);
+        return false;
+      }
       
-      return data.users.some(user => 
-        user.email?.toLowerCase() === email.toLowerCase()
-      );
+      return data && data.length > 0;
     } catch (error) {
       console.error("Error checking email existence:", error);
       return false;
@@ -118,14 +122,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkPhoneExists = async (phone: string) => {
     try {
-      const { data } = await supabase.auth.admin.listUsers({
-        page: 1, 
-        perPage: 1000,
-      });
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone_number', phone)
+        .limit(1);
       
-      if (!data || !data.users) return false;
+      if (error) {
+        console.error("Error checking phone existence:", error);
+        return false;
+      }
       
-      return data.users.some(user => user.phone === phone);
+      return data && data.length > 0;
     } catch (error) {
       console.error("Error checking phone existence:", error);
       return false;
@@ -434,7 +442,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <AuthContext.Provider value={value}>
       {needPhoneVerification && phone ? (
-        <PhoneVerification phone={phone} setNeedPhoneVerification={setNeedPhoneVerification} />
+        <PhoneVerification />
       ) : (
         children
       )}

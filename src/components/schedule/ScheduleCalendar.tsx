@@ -93,26 +93,6 @@ const ScheduleCalendar = () => {
   
   // Sort events by date (most recent first)
   const sortedEvents = [...events].sort((a, b) => a.date.getTime() - b.date.getTime());
-  
-  // Custom day renderer that adds indicator for events
-  const renderDay = (day: any) => {
-    const date = day.date;
-    
-    if (!date) return <div className={day.className}>{day.day}</div>;
-    
-    const hasEvent = events.some((event) => 
-      event.date.toDateString() === date.toDateString()
-    );
-    
-    return (
-      <div className={day.className}>
-        {day.day}
-        {hasEvent && (
-          <div className="h-1.5 w-1.5 bg-waste-green rounded-full absolute bottom-1 left-1/2 transform -translate-x-1/2" />
-        )}
-      </div>
-    );
-  };
 
   return (
     <Card className="w-full">
@@ -150,24 +130,14 @@ const ScheduleCalendar = () => {
                   setSelectedDate(selectedDate);
                 }}
                 className="rounded-md border w-full"
-                styles={{
-                  day_selected: { color: "white" },
-                  day_today: { color: "var(--foreground)" }
-                }}
-                modifiersStyles={{
-                  selected: {
-                    backgroundColor: "var(--primary)",
-                    color: "white"
-                  },
-                  today: {
-                    backgroundColor: "var(--accent)",
-                    color: "var(--accent-foreground)"
-                  }
+                modifiersClassNames={{
+                  selected: "bg-primary text-white",
+                  today: "bg-accent text-accent-foreground"
                 }}
                 modifiers={{
-                  eventDay: dates => {
+                  eventDay: (date) => {
                     return events.some(event => 
-                      dates.some(date => date?.toDateString() === event.date.toDateString())
+                      date && event.date.toDateString() === date.toDateString()
                     );
                   }
                 }}

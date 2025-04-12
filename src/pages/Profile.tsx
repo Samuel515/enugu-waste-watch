@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,6 @@ const Profile = () => {
   const [area, setArea] = useState(user?.area || "");
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber?.replace('+234', '') || "");
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Set user email from auth if available
-  const userEmail = user?.email || "";
   
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -110,7 +107,7 @@ const Profile = () => {
                   <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input 
                     id="email"
-                    value={userEmail}
+                    value={user.email}
                     className="pl-10"
                     disabled
                     readOnly
@@ -124,7 +121,7 @@ const Profile = () => {
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="relative flex items-center">
-                  <div className="absolute left-3 z-10 flex items-center gap-1 text-black">
+                  <div className="absolute left-3 z-10 flex items-center gap-1 text-muted-foreground">
                     <Phone className="h-4 w-4" />
                     <span className="text-sm">+234</span>
                   </div>
@@ -144,7 +141,7 @@ const Profile = () => {
                     disabled={isLoading}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mb-2">
+                <p className="text-xs text-muted-foreground">
                   Format: Nigerian mobile number without the country code
                 </p>
               </div>

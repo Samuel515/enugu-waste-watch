@@ -8,7 +8,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User, Mail, Lock, MapPin, Phone } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 const RegisterForm = () => {
   const [name, setName] = useState("");
@@ -22,43 +21,6 @@ const RegisterForm = () => {
   
   const { signupWithEmail, signupWithPhone, signInWithGoogle, signInWithApple } = useAuth();
   const { toast } = useToast();
-
-  // Check if email already exists
-  const checkEmailExists = async (email: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false
-        }
-      });
-      
-      // If there's no error, the email exists
-      if (!error) {
-        return true;
-      }
-      
-      // If we get a specific error about the user not being found
-      if (error.message?.includes("Email not found")) {
-        return false;
-      }
-      
-      // For other errors, we'll check directly
-      const { data: users, error: usersError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email);
-      
-      if (!usersError && users && users.length > 0) {
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error("Error checking email:", error);
-      return false;
-    }
-  };
 
   const handleEmailSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -94,33 +56,6 @@ const RegisterForm = () => {
     setIsLoading(true);
     
     try {
-      // Check if email already exists
-      const emailExists = await checkEmailExists(email);
-      
-      if (emailExists) {
-        // Check if the user registered with Google
-        const { data: providers } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            shouldCreateUser: false
-          }
-        });
-        
-        let errorMessage = "This email is already registered. Please use the login form instead.";
-        
-        // If we can detect they signed up with Google
-        if (providers && providers.user?.app_metadata?.provider === 'google') {
-          errorMessage = "This email is already registered with Google. Please use Google sign in to access your account.";
-        }
-        
-        toast({
-          title: "Email already registered",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        return;
-      }
-      
       await signupWithEmail(name, email, password, role, role === "resident" ? area : undefined);
     } catch (error) {
       console.error("Registration error:", error);
@@ -316,7 +251,7 @@ const RegisterForm = () => {
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <div className="relative flex items-center">
-                <div className="absolute left-3 z-10 flex items-center gap-1 text-black">
+                <div className="absolute left-3 z-10 flex items-center gap-1 text-muted-foreground">
                   <Phone className="h-4 w-4" />
                   <span className="text-sm">+234</span>
                 </div>
@@ -336,7 +271,7 @@ const RegisterForm = () => {
                   disabled={isLoading}
                 />
               </div>
-              <p className="text-xs text-muted-foreground mb-2">Format: +234 (Nigerian code) followed by your number</p>
+              <p className="text-xs text-muted-foreground">Format: +234 (Nigerian code) followed by your number</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

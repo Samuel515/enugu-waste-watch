@@ -1,77 +1,61 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/components/ui/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Bell, Mail, Lock, AlertTriangle, Shield, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Session } from "@supabase/supabase-js";
-
-interface UserSession {
-  id: string;
-  created_at: string;
-  user_agent: string;
-  ip_address?: string;
-  current: boolean;
-}
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Loader2, AlertCircle, Bell, Lock, Shield } from "lucide-react";
 
 const Settings = () => {
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
-  const [sessions, setSessions] = useState<UserSession[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [smsNotifications, setSmsNotifications] = useState(true);
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
+  
+  const [sessions, setSessions] = useState<any[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
-  const [isLoadingDelete, setIsLoadingDelete] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchUserSessions();
+    if (isAuthenticated && user) {
+      fetchSessions();
     }
-  }, [user]);
+  }, [isAuthenticated, user]);
 
-  const fetchUserSessions = async () => {
-    setIsLoadingSessions(true);
+  const fetchSessions = async () => {
     try {
-      const { data, error } = await supabase.auth.getSessions();
+      setIsLoadingSessions(true);
+      const { data, error } = await supabase.auth.admin.listSessions(user!.id);
       
       if (error) {
-        throw error;
-      }
-      
-      if (data.sessions) {
-        const formattedSessions: UserSession[] = data.sessions.map((session: Session) => ({
-          id: session.id,
-          created_at: new Date(session.created_at!).toLocaleString(),
-          user_agent: session.user_agent || 'Unknown device',
-          ip_address: session.ip_address,
-          current: session.id === data.sessions[0].id
-        }));
-        
-        setSessions(formattedSessions);
+        console.error("Error fetching sessions:", error);
+        toast({
+          title: "Failed to load sessions",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else if (data) {
+        setSessions(data);
       }
     } catch (error: any) {
-      console.error("Error fetching sessions:", error);
+      console.error("Session fetch error:", error);
       toast({
-        title: "Could not retrieve your active sessions",
-        description: error.message,
+        title: "Error loading sessions",
+        description: "Could not retrieve your active sessions.",
         variant: "destructive",
       });
     } finally {
@@ -79,21 +63,23 @@ const Settings = () => {
     }
   };
 
-  const handlePasswordChange = async () => {
-    if (!user?.email) {
+  const handleChangePassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
       toast({
-        title: "Cannot reset password",
-        description: "No email address associated with your account.",
+        title: "Passwords don't match",
+        description: "Your new password and confirmation don't match.",
         variant: "destructive",
       });
       return;
     }
     
-    setIsLoading(true);
+    setIsChangingPassword(true);
     
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: window.location.origin + '/auth?tab=reset-password',
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
       });
       
       if (error) {
@@ -101,211 +87,191 @@ const Settings = () => {
       }
       
       toast({
-        title: "Password reset email sent",
-        description: "Check your email for the password reset link.",
+        title: "Password updated",
+        description: "Your password has been changed successfully.",
       });
+      
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      
     } catch (error: any) {
-      console.error("Error sending password reset:", error);
+      console.error("Password change error:", error);
       toast({
-        title: "Failed to send password reset",
-        description: error.message,
+        title: "Error changing password",
+        description: error.message || "Failed to change password. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsChangingPassword(false);
     }
   };
 
-  const handleLogoutAllDevices = async () => {
-    setIsLoading(true);
+  const handleSaveNotificationSettings = async () => {
+    setIsSavingNotifications(true);
     
     try {
-      const { error } = await supabase.auth.signOut({ scope: 'global' });
-      
-      if (error) {
-        throw error;
-      }
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       toast({
-        title: "Logged out from all devices",
-        description: "You have been successfully logged out from all devices.",
+        title: "Notification preferences updated",
+        description: "Your notification settings have been saved.",
       });
-      
-      // Redirect to auth page
-      window.location.href = "/auth";
     } catch (error: any) {
-      console.error("Error logging out from all devices:", error);
       toast({
-        title: "Failed to logout from all devices",
-        description: error.message,
+        title: "Error saving preferences",
+        description: error.message || "Failed to save notification preferences.",
         variant: "destructive",
       });
-      setIsLoading(false);
+    } finally {
+      setIsSavingNotifications(false);
     }
   };
-
-  const handleDeleteAccount = async () => {
-    if (!user) return;
-    
-    setIsLoadingDelete(true);
-    
+  
+  const handleSignOutSession = async (sessionId: string) => {
     try {
-      // For Supabase, we need to use our own admin API or server function to delete users
-      // For demonstration purposes, we'll try to delete the user directly
-      const { error } = await supabase.rpc('delete_user');
+      const { error } = await supabase.auth.admin.signOut(sessionId);
       
       if (error) {
         throw error;
       }
+      
+      fetchSessions();
+      
+      toast({
+        title: "Session signed out",
+        description: "The selected session has been terminated.",
+      });
+    } catch (error: any) {
+      console.error("Session signout error:", error);
+      toast({
+        title: "Error signing out session",
+        description: error.message || "Failed to sign out the session. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    
+    try {
+      const { error } = await supabase.auth.admin.deleteUser(user!.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      await logout();
       
       toast({
         title: "Account deleted",
-        description: "Your account has been successfully deleted.",
+        description: "Your account has been permanently deleted.",
       });
       
-      // Redirect to home page
-      window.location.href = "/";
     } catch (error: any) {
-      console.error("Error deleting account:", error);
+      console.error("Account deletion error:", error);
       toast({
-        title: "Failed to delete account",
-        description: "To delete your account, please contact support. " + error.message,
+        title: "Error deleting account",
+        description: error.message || "Failed to delete your account. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoadingDelete(false);
+      setIsDeletingAccount(false);
     }
   };
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return null;
   }
 
   return (
     <Layout requireAuth>
-      <div className="container py-8 max-w-4xl">
+      <div className="container py-8 max-w-3xl">
         <h1 className="text-3xl font-bold mb-2">Settings</h1>
         <p className="text-muted-foreground mb-8">
           Manage your account settings and preferences
         </p>
         
-        <Tabs defaultValue="account" className="w-full">
-          <TabsList className="grid grid-cols-2 md:grid-cols-3 mb-8">
-            <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
+        <Tabs defaultValue="password" className="w-full space-y-6">
+          <TabsList>
+            <TabsTrigger value="password">
+              <Lock className="h-4 w-4 mr-2" />
+              Password
+            </TabsTrigger>
+            <TabsTrigger value="notifications">
+              <Bell className="h-4 w-4 mr-2" />
+              Notifications
+            </TabsTrigger>
+            <TabsTrigger value="security">
+              <Shield className="h-4 w-4 mr-2" />
+              Security
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="account">
+          <TabsContent value="password">
             <Card>
               <CardHeader>
-                <CardTitle>Account Settings</CardTitle>
+                <CardTitle>Change Password</CardTitle>
                 <CardDescription>
-                  Manage your account information and preferences
+                  Update your password to keep your account secure
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Account Information</h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="name">Name</Label>
-                        <Input id="name" value={user.name || ""} readOnly />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Update your name in the profile section
-                        </p>
-                      </div>
-                      <div>
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" value={user.email || ""} readOnly />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Email cannot be changed. Contact support if needed.
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="role">Role</Label>
-                      <Input id="role" value={user.role.charAt(0).toUpperCase() + user.role.slice(1)} readOnly />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Your role determines what features you can access
-                      </p>
-                    </div>
+              
+              <form onSubmit={handleChangePassword}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="current-password">Current Password</Label>
+                    <Input
+                      id="current-password"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      required
+                      disabled={isChangingPassword}
+                    />
                   </div>
-                </div>
-                
-                <Separator />
-                
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Account Actions</h3>
-                  <div className="space-y-4">
-                    <div className="flex flex-col space-y-2">
-                      <Button
-                        variant="outline"
-                        onClick={handlePasswordChange}
-                        disabled={isLoading}
-                      >
-                        <Lock className="h-4 w-4 mr-2" />
-                        Change Password
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        Request a password reset link to be sent to your email
-                      </p>
-                    </div>
-                    
-                    <div className="flex flex-col space-y-2">
-                      <Button
-                        variant="outline"
-                        onClick={handleLogoutAllDevices}
-                        disabled={isLoading}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout from All Devices
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        Sign out from all devices where you're currently logged in
-                      </p>
-                    </div>
-                    
-                    <div className="flex flex-col space-y-2">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="destructive"
-                            disabled={isLoadingDelete}
-                          >
-                            <AlertTriangle className="h-4 w-4 mr-2" />
-                            Delete Account
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete your
-                              account and remove all your data from our servers.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-destructive hover:bg-destructive/90"
-                              onClick={handleDeleteAccount}
-                              disabled={isLoadingDelete}
-                            >
-                              {isLoadingDelete ? "Deleting..." : "Delete Account"}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      <p className="text-xs text-muted-foreground">
-                        Delete your account and all your personal data permanently
-                      </p>
-                    </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">New Password</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      disabled={isChangingPassword}
+                    />
                   </div>
-                </div>
-              </CardContent>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      disabled={isChangingPassword}
+                    />
+                  </div>
+                </CardContent>
+                
+                <CardFooter>
+                  <Button 
+                    type="submit" 
+                    disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+                  >
+                    {isChangingPassword ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Changing Password...
+                      </>
+                    ) : (
+                      "Change Password"
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
             </Card>
           </TabsContent>
           
@@ -314,84 +280,57 @@ const Settings = () => {
               <CardHeader>
                 <CardTitle>Notification Settings</CardTitle>
                 <CardDescription>
-                  Manage how and when you get notified
+                  Configure how you want to receive notifications
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Email Notifications</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="email_reports">Waste Reports</Label>
-                          <p className="text-muted-foreground text-sm">
-                            Get notified about updates to your waste reports
-                          </p>
-                        </div>
-                        <Switch id="email_reports" />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="email_collection">Collection Reminders</Label>
-                          <p className="text-muted-foreground text-sm">
-                            Get email reminders about upcoming waste collection in your area
-                          </p>
-                        </div>
-                        <Switch id="email_collection" />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="email_news">News & Updates</Label>
-                          <p className="text-muted-foreground text-sm">
-                            Receive newsletters and updates from Enugu Waste Watch
-                          </p>
-                        </div>
-                        <Switch id="email_news" />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">App Notifications</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="app_reports">Waste Reports</Label>
-                          <p className="text-muted-foreground text-sm">
-                            Get in-app notifications about updates to your waste reports
-                          </p>
-                        </div>
-                        <Switch id="app_reports" checked />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="app_collection">Collection Reminders</Label>
-                          <p className="text-muted-foreground text-sm">
-                            Get in-app reminders about upcoming waste collection in your area
-                          </p>
-                        </div>
-                        <Switch id="app_collection" checked />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="app_news">News & Updates</Label>
-                          <p className="text-muted-foreground text-sm">
-                            Receive in-app newsletters and updates from Enugu Waste Watch
-                          </p>
-                        </div>
-                        <Switch id="app_news" />
-                      </div>
-                    </div>
-                  </div>
+              
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between space-x-2">
+                  <Label htmlFor="email-notifications">Email Notifications</Label>
+                  <Switch
+                    id="email-notifications"
+                    checked={emailNotifications}
+                    onCheckedChange={setEmailNotifications}
+                    disabled={isSavingNotifications}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between space-x-2">
+                  <Label htmlFor="sms-notifications">SMS Notifications</Label>
+                  <Switch
+                    id="sms-notifications"
+                    checked={smsNotifications}
+                    onCheckedChange={setSmsNotifications}
+                    disabled={isSavingNotifications}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between space-x-2">
+                  <Label htmlFor="push-notifications">Push Notifications</Label>
+                  <Switch
+                    id="push-notifications"
+                    checked={pushNotifications}
+                    onCheckedChange={setPushNotifications}
+                    disabled={isSavingNotifications}
+                  />
                 </div>
               </CardContent>
+              
+              <CardFooter>
+                <Button 
+                  onClick={handleSaveNotificationSettings}
+                  disabled={isSavingNotifications}
+                >
+                  {isSavingNotifications ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Preferences"
+                  )}
+                </Button>
+              </CardFooter>
             </Card>
           </TabsContent>
           
@@ -400,86 +339,104 @@ const Settings = () => {
               <CardHeader>
                 <CardTitle>Security Settings</CardTitle>
                 <CardDescription>
-                  Manage your security preferences and active sessions
+                  Manage your account security preferences
                 </CardDescription>
               </CardHeader>
+              
               <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Password & Authentication</h3>
-                  <div className="space-y-4">
-                    <div className="flex flex-col space-y-2">
-                      <Button
-                        variant="outline"
-                        onClick={handlePasswordChange}
-                        disabled={isLoading}
-                      >
-                        <Lock className="h-4 w-4 mr-2" />
-                        Change Password
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        Update your password for better security
-                      </p>
-                    </div>
+                <div className="flex items-center justify-between space-x-2">
+                  <div>
+                    <h4 className="font-medium">Session Management</h4>
+                    <p className="text-sm text-muted-foreground">
+                      View and manage your active sessions
+                    </p>
                   </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={fetchSessions}
+                    disabled={isLoadingSessions}
+                  >
+                    {isLoadingSessions ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      "Refresh Sessions"
+                    )}
+                  </Button>
                 </div>
                 
-                <Separator />
-                
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium">Active Sessions</h3>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={fetchUserSessions}
-                      disabled={isLoadingSessions}
-                    >
-                      {isLoadingSessions ? "Loading..." : "Refresh"}
-                    </Button>
-                  </div>
-                  
-                  {isLoadingSessions ? (
-                    <div className="text-center py-6">
-                      <p className="text-muted-foreground">Loading sessions...</p>
-                    </div>
-                  ) : sessions.length > 0 ? (
-                    <div className="space-y-4">
-                      {sessions.map((session) => (
-                        <div key={session.id} className="border rounded-md p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <p className="font-medium">{session.user_agent}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {session.ip_address ? `IP: ${session.ip_address}` : "IP not available"}
-                              </p>
-                            </div>
-                            {session.current && (
-                              <Badge variant="outline" className="border-waste-green text-waste-green">
-                                Current Session
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            Signed in on {session.created_at}
+                {sessions.length > 0 ? (
+                  <div className="space-y-2">
+                    {sessions.map((session) => (
+                      <div key={session.id} className="flex items-center justify-between p-3 border rounded-md">
+                        <div>
+                          <p className="font-medium">{session.user_agent || "Unknown device"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Last active: {new Date(session.last_active_at).toLocaleString()}
                           </p>
                         </div>
-                      ))}
-                      
-                      <Button
-                        variant="destructive"
-                        onClick={handleLogoutAllDevices}
-                        disabled={isLoading}
-                        className="w-full"
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Logout from All Devices
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleSignOutSession(session.id)}
+                        >
+                          Sign Out
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No active sessions found.</p>
+                )}
+                
+                <div className="flex items-center justify-between space-x-2 pt-4">
+                  <div>
+                    <h4 className="font-medium text-red-500">Delete Account</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Permanently delete your account and all data
+                    </p>
+                  </div>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">
+                        Delete Account
                       </Button>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6">
-                      <p className="text-muted-foreground">No active sessions found.</p>
-                    </div>
-                  )}
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          <div className="flex items-center">
+                            <AlertCircle className="h-5 w-5 mr-2 text-red-500" />
+                            Delete Account Permanently
+                          </div>
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your account
+                          and remove all your data from our servers.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteAccount}
+                          disabled={isDeletingAccount}
+                          className="bg-red-500 hover:bg-red-600"
+                        >
+                          {isDeletingAccount ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Deleting...
+                            </>
+                          ) : (
+                            "Yes, delete my account"
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>

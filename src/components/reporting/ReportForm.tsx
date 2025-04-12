@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +16,6 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Camera, MapPin, Upload, Trash2, AlertTriangle, CircleAlert, TriangleAlert } from "lucide-react";
 import ImageUpload from "@/components/reporting/ImageUpload";
-import { supabase } from "@/integrations/supabase/client";
 
 const WASTE_TYPES = [
   {
@@ -47,7 +45,6 @@ const WASTE_TYPES = [
 ];
 
 const ReportForm = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [title, setTitle] = useState("");
@@ -61,19 +58,19 @@ const ReportForm = () => {
   const handleLocationDetection = () => {
     setIsLocationLoading(true);
     
-    // Use the browser's geolocation API
+    // In a real app, you would use the browser's geolocation API
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        // In a real app, we would call a geocoding service
-        // For now, we'll save the coordinates in the location field
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        setLocation(`Located at: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-        setIsLocationLoading(false);
-        toast({
-          title: "Location detected",
-          description: "Your current location has been detected successfully.",
-        });
+        // This would call a reverse geocoding API with position.coords.latitude and position.coords.longitude
+        // For demo, we'll simulate a delayed response
+        setTimeout(() => {
+          setLocation("Detected: Independence Layout, Enugu");
+          setIsLocationLoading(false);
+          toast({
+            title: "Location detected",
+            description: "Your current location has been detected successfully.",
+          });
+        }, 1500);
       },
       (error) => {
         setIsLocationLoading(false);
@@ -89,16 +86,6 @@ const ReportForm = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please login to submit a report",
-        variant: "destructive",
-      });
-      navigate("/auth");
-      return;
-    }
-    
     // Validation
     if (!title || !description || !location || !wasteType) {
       toast({
@@ -111,38 +98,15 @@ const ReportForm = () => {
     
     setIsLoading(true);
     
+    // In a real app, you would submit this to an API
     try {
-      // Submit report to Supabase
-      const { data, error } = await supabase
-        .from('reports')
-        .insert([
-          {
-            user_id: user.id,
-            title,
-            description,
-            location,
-            waste_type: wasteType,
-            status: 'pending',
-            images
-          }
-        ])
-        .select();
-      
-      if (error) {
-        throw error;
-      }
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       toast({
         title: "Report submitted successfully",
         description: "Your waste report has been received and will be processed.",
       });
-      
-      // Navigate to dashboard or report details
-      if (data && data[0]) {
-        navigate(`/reports/${data[0].id}`);
-      } else {
-        navigate("/dashboard");
-      }
       
       // Reset form
       setTitle("");
@@ -150,11 +114,10 @@ const ReportForm = () => {
       setLocation(user?.area || "");
       setWasteType("");
       setImages([]);
-    } catch (error: any) {
-      console.error("Error submitting report:", error);
+    } catch (error) {
       toast({
         title: "Failed to submit report",
-        description: error.message || "There was an error submitting your report. Please try again.",
+        description: "There was an error submitting your report. Please try again.",
         variant: "destructive",
       });
     } finally {

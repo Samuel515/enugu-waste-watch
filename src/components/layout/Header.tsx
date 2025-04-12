@@ -45,7 +45,7 @@ const Header = () => {
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
             <Leaf className="h-6 w-6 text-waste-green" />
-            <span className="text-xl font-bold sm:text-base md:text-lg lg:text-xl">Enugu Waste Watch</span>
+            <span className="text-xl font-bold xs:text-[10px] sm:text-base md:text-lg lg:text-xl">Enugu Waste Watch</span>
           </Link>
         </div>
 

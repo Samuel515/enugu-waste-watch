@@ -121,7 +121,7 @@ const Profile = () => {
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="relative flex items-center">
-                  <div className="absolute left-3 z-10 flex items-center gap-1 text-muted-foreground">
+                  <div className="absolute left-3 z-10 flex items-center gap-1 text-black">
                     <Phone className="h-4 w-4" />
                     <span className="text-sm">+234</span>
                   </div>
@@ -141,7 +141,7 @@ const Profile = () => {
                     disabled={isLoading}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground mb-2">
                   Format: Nigerian mobile number without the country code
                 </p>
               </div>

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,11 +61,16 @@ const ScheduleCalendar = () => {
   };
 
   // Function to render date cell
-  const renderDateCell = (date: Date | undefined) => {
-    if (date && hasSchedule(date)) {
-      return <div className="bg-waste-green/20 w-full h-full rounded-full flex items-center justify-center" />;
-    }
-    return null;
+  const renderDateCell = (props: DayContentProps) => {
+    const isScheduled = props.date && hasSchedule(props.date);
+    
+    return (
+      <div className="relative w-full h-full flex items-center justify-center">
+        <div className={`w-7 h-7 flex items-center justify-center rounded-full ${isScheduled ? 'bg-waste-green/20' : ''}`}>
+          {props.day}
+        </div>
+      </div>
+    );
   };
 
   // Sort schedule by date for list view
@@ -73,26 +79,24 @@ const ScheduleCalendar = () => {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>Collection Schedule</CardTitle>
-            <CardDescription>
-              View upcoming waste collection in your area
-            </CardDescription>
-          </div>
-          <div>
-            <Tabs value={view} onValueChange={(v) => setView(v as "calendar" | "list")}>
-              <TabsList className="grid grid-cols-2 w-[200px]">
-                <TabsTrigger value="calendar">Calendar</TabsTrigger>
-                <TabsTrigger value="list">List View</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+    <Card className="overflow-hidden">
+      <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+        <div className="mb-4 sm:mb-0">
+          <CardTitle>Collection Schedule</CardTitle>
+          <CardDescription>
+            View upcoming waste collection in your area
+          </CardDescription>
+        </div>
+        <div>
+          <Tabs value={view} onValueChange={(v) => setView(v as "calendar" | "list")}>
+            <TabsList className="grid grid-cols-2 w-[200px]">
+              <TabsTrigger value="calendar">Calendar</TabsTrigger>
+              <TabsTrigger value="list">List View</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4">
         <Tabs value={view} className="w-full">
           <TabsContent value="calendar" className="mt-0">
             <div className="grid md:grid-cols-2 gap-8">
@@ -103,12 +107,7 @@ const ScheduleCalendar = () => {
                   onSelect={setSelectedDate}
                   className="rounded-md border w-full"
                   components={{
-                    DayContent: (props: DayContentProps) => (
-                      <div className="relative w-full h-full flex items-center justify-center">
-                        <div>{props.day}</div>
-                        {renderDateCell(props.date)}
-                      </div>
-                    ),
+                    DayContent: renderDateCell,
                   }}
                 />
               </div>

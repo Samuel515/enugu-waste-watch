@@ -26,8 +26,8 @@ const Dashboard = () => {
           <div>
             <Button asChild>
               <Link to="/report">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Report Waste Issue
+                <PlusCircle className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Report Waste Issue</span>
               </Link>
             </Button>
           </div>

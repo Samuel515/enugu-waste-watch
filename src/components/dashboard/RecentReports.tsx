@@ -81,7 +81,7 @@ const ReportCard = ({ report, userRole }: ReportCardProps) => {
         );
       case "in-progress":
         return (
-          <Badge variant="outline" className="bg-waste-blue/10 text-waste-blue border-waste-blue">
+          <Badge variant="outline" className="bg-waste-blue/10 text-waste-blue border-waste-blue whitespace-nowrap text-xs">
             <Clock className="h-3 w-3 mr-1" />
             In Progress
           </Badge>
@@ -149,7 +149,7 @@ const RecentReports = ({ userRole }: RecentReportsProps) => {
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Recent Reports</CardTitle>
-          <CardDescription>
+          <CardDescription className="hidden sm:block">
             {userRole === "resident"
               ? "Your recently reported waste issues"
               : "Latest waste issues reported by residents"}

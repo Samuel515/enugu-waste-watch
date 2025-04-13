@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Mail } from "lucide-react";
-import { Session as SupabaseSession } from "@supabase/supabase-js";
+import { Badge } from "@/components/ui/badge";
 
 interface CustomSession {
   id: string;
@@ -35,17 +34,17 @@ export default function SecuritySection() {
         const { data } = await supabase.auth.getSession();
         
         if (data && data.session) {
-          // Format it for display
-          const supabaseSession = data.session as SupabaseSession;
-          const session: CustomSession = {
-            id: supabaseSession.id,
-            created_at: new Date(supabaseSession.created_at ? supabaseSession.created_at * 1000 : Date.now()).toISOString(),
+          // Format it for display - properly access session properties
+          const session = data.session;
+          const customSession: CustomSession = {
+            id: session.access_token.substring(0, 8), // Use a part of access token as id
+            created_at: new Date().toISOString(), // Use current date as fallback
             user_agent: navigator.userAgent,
             ip: null, // Not available client-side
-            last_sign_in_at: new Date(supabaseSession.created_at ? supabaseSession.created_at * 1000 : Date.now()).toISOString()
+            last_sign_in_at: new Date().toISOString() // Use current date as fallback
           };
           
-          setSessions([session]);
+          setSessions([customSession]);
         }
       } catch (error) {
         console.error('Error fetching sessions:', error);
@@ -222,7 +221,6 @@ export default function SecuritySection() {
   );
 }
 
-// Missing Badge component - let's create it inline
 const Badge = ({ className, children }: { className?: string, children: React.ReactNode }) => {
   return (
     <span className={`text-xs px-2 py-1 rounded-full ${className || ''}`}>

@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,17 +103,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkEmailExists = async (email: string) => {
     try {
-      // First check auth.users using getUserByEmail
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
-      if (userError) {
-        console.log("Error checking email in auth:", userError);
-      }
-      
-      if (userData) {
-        return true;
-      }
-      
-      // Fallback: check profiles table
+      // Remove the call to getUserByEmail which doesn't exist
+      // Instead, check directly in the profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('email')

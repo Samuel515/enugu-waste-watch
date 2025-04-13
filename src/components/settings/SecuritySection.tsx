@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Mail } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Mail, BadgeCheck } from "lucide-react";
+import { Badge as UIBadge } from "@/components/ui/badge";
 
 interface CustomSession {
   id: string;
@@ -158,7 +158,10 @@ export default function SecuritySection() {
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{getDeviceFromUserAgent(session.user_agent)}</span>
-                      <Badge className="bg-green-100 text-green-800">Active</Badge>
+                      <UIBadge variant="secondary" className="bg-green-100 text-green-800">
+                        <BadgeCheck className="h-3.5 w-3.5 mr-1" />
+                        Active
+                      </UIBadge>
                     </div>
                     <div className="text-xs text-muted-foreground">
                       <p>Last active: {formatDate(session.last_sign_in_at)}</p>
@@ -220,11 +223,3 @@ export default function SecuritySection() {
     </div>
   );
 }
-
-const Badge = ({ className, children }: { className?: string, children: React.ReactNode }) => {
-  return (
-    <span className={`text-xs px-2 py-1 rounded-full ${className || ''}`}>
-      {children}
-    </span>
-  );
-};

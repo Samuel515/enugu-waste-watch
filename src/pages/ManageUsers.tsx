@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,11 +30,6 @@ interface ExtendedUser {
   status: "active" | "inactive";
 }
 
-interface AdminUser {
-  id: string;
-  email: string;
-}
-
 const ManageUsers = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,17 +50,7 @@ const ManageUsers = () => {
       try {
         setIsLoading(true);
         
-        // Get all users first from auth admin API
-        const { data: adminData, error: adminError } = await supabase.auth.admin.listUsers() as any;
-        
-        if (adminError) {
-          console.error('Error fetching auth users:', adminError);
-          throw adminError;
-        }
-        
-        const authUsers: AdminUser[] = adminData?.users || [];
-        
-        // Now get profiles
+        // Get profiles from the profiles table
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('*');
@@ -73,26 +59,28 @@ const ManageUsers = () => {
           console.error('Error fetching profiles:', profilesError);
           throw profilesError;
         }
+
+        if (!profilesData || profilesData.length === 0) {
+          console.log('No profiles found in the database');
+          setUsers([]);
+          setIsLoading(false);
+          return;
+        }
         
-        // Create a map of user IDs to emails from auth data
-        const emailMap = new Map<string, string>();
-        authUsers.forEach(authUser => {
-          if (authUser.email) {
-            emailMap.set(authUser.id, authUser.email);
-          }
-        });
+        console.log('Profiles data fetched:', profilesData);
         
         // Map to ExtendedUser format
-        const mappedUsers: ExtendedUser[] = profilesData?.map(profile => ({
+        const mappedUsers: ExtendedUser[] = profilesData.map(profile => ({
           id: profile.id,
           name: profile.name || 'Unknown',
-          email: profile.email || emailMap.get(profile.id) || 'No email',
-          role: profile.role as UserRole,
+          email: profile.email || 'No email',
+          role: (profile.role as UserRole) || 'resident',
           area: profile.area,
           status: "active" // All users are active by default
-        })) || [];
+        }));
         
         setUsers(mappedUsers);
+        console.log('Mapped users:', mappedUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
         toast({
@@ -126,10 +114,7 @@ const ManageUsers = () => {
       
       const newStatus = userToUpdate.status === "active" ? "inactive" : "active";
       
-      // Update the user status in Supabase
-      // In a real application, you might store status in profiles table
-      // For now, we'll just update the UI
-      
+      // Update the user status in the UI
       setUsers(
         users.map((u) =>
           u.id === userId
@@ -157,10 +142,20 @@ const ManageUsers = () => {
     if (!currentUser) return;
     
     try {
-      // Delete user from auth
-      const { error: authError } = await supabase.auth.admin.deleteUser(currentUser.id);
+      // Delete user from profiles table first
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', currentUser.id);
+        
+      if (profileError) throw profileError;
       
-      if (authError) throw authError;
+      // Try to delete from auth as well (might require admin rights)
+      try {
+        await supabase.auth.admin.deleteUser(currentUser.id);
+      } catch (authError) {
+        console.error('Could not delete user from auth system. This may require admin privileges:', authError);
+      }
       
       // Update local state
       setUsers(users.filter((u) => u.id !== currentUser.id));
@@ -193,7 +188,8 @@ const ManageUsers = () => {
           name: editName,
           role: editRole,
           area: editArea || null,
-          email: editEmail
+          email: editEmail,
+          updated_at: new Date().toISOString()
         })
         .eq('id', currentUser.id);
       

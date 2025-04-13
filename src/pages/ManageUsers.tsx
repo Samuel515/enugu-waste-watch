@@ -50,7 +50,7 @@ const ManageUsers = () => {
       try {
         setIsLoading(true);
         
-        // Get profiles from the profiles table
+        // Get all profiles from the profiles table, not just the current user
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('*');

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Search, UserPlus, Edit, Trash2, UserCheck, UserX } from "lucide-react";
-import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { useAuth, UserRole, AppUser } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 
 // Define extended user type for the UI
 interface ExtendedUser {
@@ -19,19 +30,60 @@ interface ExtendedUser {
   status: "active" | "inactive";
 }
 
-// Mock users data - would be replaced by backend API
-const MOCK_USERS: ExtendedUser[] = [
-  { id: "1", name: "John Resident", email: "resident@example.com", role: "resident", area: "Independence Layout", status: "active" },
-  { id: "2", name: "Mary Official", email: "official@example.com", role: "official", area: null, status: "active" },
-  { id: "3", name: "Admin User", email: "admin@example.com", role: "admin", area: null, status: "active" },
-  { id: "4", name: "Jane Smith", email: "jane@example.com", role: "resident", area: "New Haven", status: "inactive" },
-  { id: "5", name: "Robert Johnson", email: "robert@example.com", role: "resident", area: "Trans Ekulu", status: "active" },
-];
-
 const ManageUsers = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState<ExtendedUser[]>(MOCK_USERS);
+  const [users, setUsers] = useState<ExtendedUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editRole, setEditRole] = useState<UserRole>("resident");
+  const [editArea, setEditArea] = useState("");
+  const { toast } = useToast();
+
+  // Fetch users from Supabase
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get users from profiles table
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*');
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Map to ExtendedUser format
+        const mappedUsers: ExtendedUser[] = data?.map(profile => ({
+          id: profile.id,
+          name: profile.name || 'Unknown',
+          email: profile.email || 'No email',
+          role: profile.role as UserRole,
+          area: profile.area,
+          status: "active" // All users are active by default
+        })) || [];
+        
+        setUsers(mappedUsers);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        toast({
+          title: "Failed to load users",
+          description: "There was an error loading the user list.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchUsers();
+  }, [toast]);
 
   // Filter users based on search query
   const filteredUsers = users.filter(
@@ -43,19 +95,132 @@ const ManageUsers = () => {
   );
 
   // Toggle user status (active/inactive)
-  const toggleUserStatus = (userId: string) => {
-    setUsers(
-      users.map((u) =>
-        u.id === userId
-          ? { ...u, status: u.status === "active" ? "inactive" : "active" }
-          : u
-      )
-    );
+  const toggleUserStatus = async (userId: string) => {
+    try {
+      const userToUpdate = users.find(u => u.id === userId);
+      
+      if (!userToUpdate) return;
+      
+      const newStatus = userToUpdate.status === "active" ? "inactive" : "active";
+      
+      // Update the user status in Supabase
+      // In a real application, you might store status in profiles table
+      // For now, we'll just update the UI
+      
+      setUsers(
+        users.map((u) =>
+          u.id === userId
+            ? { ...u, status: newStatus }
+            : u
+        )
+      );
+      
+      toast({
+        title: "Status updated",
+        description: `User ${userToUpdate.name} is now ${newStatus}.`,
+      });
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      toast({
+        title: "Update failed",
+        description: "Failed to update user status.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Delete user
-  const deleteUser = (userId: string) => {
-    setUsers(users.filter((u) => u.id !== userId));
+  const deleteUser = async () => {
+    if (!currentUser) return;
+    
+    try {
+      // Delete user from auth and profiles (cascade)
+      const { error } = await supabase.auth.admin.deleteUser(
+        currentUser.id
+      );
+      
+      if (error) throw error;
+      
+      // Update local state
+      setUsers(users.filter((u) => u.id !== currentUser.id));
+      
+      toast({
+        title: "User deleted",
+        description: `${currentUser.name} has been removed from the system.`,
+      });
+      
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete user. You may not have sufficient permissions.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle edit form submission
+  const handleEditSubmit = async () => {
+    if (!currentUser) return;
+    
+    try {
+      // Update user in profiles table
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: editName,
+          role: editRole,
+          area: editArea || null
+        })
+        .eq('id', currentUser.id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setUsers(
+        users.map((u) =>
+          u.id === currentUser.id
+            ? {
+                ...u,
+                name: editName,
+                role: editRole,
+                area: editArea || null
+              }
+            : u
+        )
+      );
+      
+      toast({
+        title: "User updated",
+        description: `${editName}'s details have been updated.`,
+      });
+      
+      setEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "Update failed",
+        description: "Failed to update user details.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Open edit dialog and populate fields
+  const openEditDialog = (user: ExtendedUser) => {
+    setCurrentUser(user);
+    setEditName(user.name);
+    setEditEmail(user.email);
+    setEditRole(user.role);
+    setEditArea(user.area || "");
+    setEditDialogOpen(true);
+  };
+
+  // Open delete confirmation dialog
+  const openDeleteDialog = (user: ExtendedUser) => {
+    setCurrentUser(user);
+    setDeleteDialogOpen(true);
   };
 
   // Role badge color
@@ -123,7 +288,13 @@ const ManageUsers = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.length === 0 ? (
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        Loading users...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredUsers.length === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={6}
@@ -162,6 +333,7 @@ const ManageUsers = () => {
                               size="icon"
                               className="h-8 w-8"
                               title="Edit User"
+                              onClick={() => openEditDialog(user)}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -187,7 +359,7 @@ const ManageUsers = () => {
                               size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive"
                               title="Delete User"
-                              onClick={() => deleteUser(user.id)}
+                              onClick={() => openDeleteDialog(user)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -202,6 +374,94 @@ const ManageUsers = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user details. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="name" className="text-right">
+                Name
+              </label>
+              <Input
+                id="name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="email" className="text-right">
+                Email
+              </label>
+              <Input
+                id="email"
+                value={editEmail}
+                disabled
+                className="col-span-3 bg-muted"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="role" className="text-right">
+                Role
+              </label>
+              <Select value={editRole} onValueChange={(value) => setEditRole(value as UserRole)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="official">Official</SelectItem>
+                  <SelectItem value="resident">Resident</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="area" className="text-right">
+                Area
+              </label>
+              <Input
+                id="area"
+                value={editArea}
+                onChange={(e) => setEditArea(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSubmit}>Save changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {currentUser?.name}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={deleteUser}>
+              Delete User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

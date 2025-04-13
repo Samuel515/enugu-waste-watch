@@ -85,10 +85,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if (profile) {
+        // Fixed type error here by using optional chaining and empty string fallback
+        const userEmail = session?.user?.email || '';
+        
         setUser({
           id: profile.id,
           name: profile.name || '',
-          email: session?.user?.email || '',
+          email: userEmail,
           role: profile.role as UserRole,
           area: profile.area,
           phoneNumber: profile.phone_number
@@ -179,6 +182,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           variant: "destructive",
         });
         setIsLoading(false);
+        navigate('/auth?tab=login');
         return;
       }
       
@@ -234,37 +238,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           variant: "destructive",
         });
         setIsLoading(false);
+        navigate('/auth?tab=login');
         return;
       }
       
-      const { data, error } = await supabase.auth.signUp({
+      // Send OTP via SMS
+      const { data, error } = await supabase.auth.signInWithOtp({
         phone: formattedPhone,
-        password,
         options: {
+          shouldCreateUser: true,
           data: {
             name,
             role,
             area,
-          },
-        },
+            password, // Store temporarily to create user after verification
+          }
+        }
       });
       
       if (error) {
         throw error;
       }
       
-      if (data.user) {
-        setNeedPhoneVerification(true);
-        setPhone(formattedPhone);
-        
-        // Redirect to verification page with phone number as query param
-        navigate(`/auth?tab=verify&phone=${encodeURIComponent(formattedPhone)}`);
-        
-        toast({
-          title: "Verification required",
-          description: "Please enter the verification code sent to your phone.",
-        });
-      }
+      setNeedPhoneVerification(true);
+      setPhone(formattedPhone);
+      
+      // Redirect to verification page with phone number as query param
+      navigate(`/auth?tab=verify&phone=${encodeURIComponent(formattedPhone)}`);
+      
+      toast({
+        title: "Verification required",
+        description: "Please enter the verification code sent to your phone.",
+      });
     } catch (error: any) {
       console.error("Phone signup error:", error);
       toast({

@@ -24,6 +24,9 @@ import Settings from "./pages/Settings";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import TermsOfService from "./pages/legal/TermsOfService";
 import CookiePolicy from "./pages/legal/CookiePolicy";
+import AdminAnalytics from "./pages/AdminAnalytics";
+import ManageReports from "./pages/ManageReports";
+import ReportDetail from "./pages/ReportDetail";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +47,9 @@ const App = () => (
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/manage-users" element={<ManageUsers />} />
+              <Route path="/admin/analytics" element={<AdminAnalytics />} />
+              <Route path="/manage-reports" element={<ManageReports />} />
+              <Route path="/reports/:reportId" element={<ReportDetail />} />
               <Route path="/about" element={<About />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/profile" element={<Profile />} />

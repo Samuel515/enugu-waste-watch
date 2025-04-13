@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -50,7 +49,7 @@ const ReportDetail = () => {
           .from("reports")
           .select("*")
           .eq("id", reportId)
-          .single();
+          .single() as any;
         
         if (error) {
           throw error;
@@ -109,7 +108,7 @@ const ReportDetail = () => {
       const { error } = await supabase
         .from("reports")
         .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq("id", report.id);
+        .eq("id", report.id) as any;
 
       if (error) throw error;
 
@@ -138,7 +137,7 @@ const ReportDetail = () => {
       const { error } = await supabase
         .from("reports")
         .delete()
-        .eq("id", report.id);
+        .eq("id", report.id) as any;
       
       if (error) throw error;
       

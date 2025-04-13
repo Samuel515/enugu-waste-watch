@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,10 +24,11 @@ const ManageReports = () => {
       setIsLoading(true);
       try {
         // Fetch reports from Supabase
+        // Need to cast the table name as a type workaround
         const { data, error } = await supabase
           .from('reports')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false }) as any;
         
         if (error) throw error;
         

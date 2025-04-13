@@ -8,8 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Mail } from "lucide-react";
+import { Session as SupabaseSession } from "@supabase/supabase-js";
 
-interface Session {
+interface CustomSession {
   id: string;
   created_at: string;
   user_agent: string;
@@ -21,7 +22,7 @@ export default function SecuritySection() {
   const { user } = useAuth();
   const [emailOnLogin, setEmailOnLogin] = useState(true);
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<CustomSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showContactModal, setShowContactModal] = useState(false);
   
@@ -35,12 +36,13 @@ export default function SecuritySection() {
         
         if (data && data.session) {
           // Format it for display
-          const session: Session = {
-            id: data.session.id,
-            created_at: new Date(data.session.created_at || Date.now()).toISOString(),
+          const supabaseSession = data.session as SupabaseSession;
+          const session: CustomSession = {
+            id: supabaseSession.id,
+            created_at: new Date(supabaseSession.created_at ? supabaseSession.created_at * 1000 : Date.now()).toISOString(),
             user_agent: navigator.userAgent,
             ip: null, // Not available client-side
-            last_sign_in_at: new Date(data.session.created_at || Date.now()).toISOString()
+            last_sign_in_at: new Date(supabaseSession.created_at ? supabaseSession.created_at * 1000 : Date.now()).toISOString()
           };
           
           setSessions([session]);

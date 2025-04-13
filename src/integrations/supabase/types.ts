@@ -9,10 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      pickup_schedules: {
+        Row: {
+          area: string
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          pickup_date: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          pickup_date: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          pickup_date?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           area: string | null
           created_at: string
+          email: string | null
           id: string
           name: string | null
           phone_number: string | null
@@ -22,6 +56,7 @@ export type Database = {
         Insert: {
           area?: string | null
           created_at?: string
+          email?: string | null
           id: string
           name?: string | null
           phone_number?: string | null
@@ -31,11 +66,57 @@ export type Database = {
         Update: {
           area?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           name?: string | null
           phone_number?: string | null
           role?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          coordinates: Json | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          location: string
+          status: string
+          title: string
+          updated_at: string
+          user_area: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          coordinates?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_area?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          coordinates?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_area?: string | null
+          user_id?: string
+          user_name?: string | null
         }
         Relationships: []
       }

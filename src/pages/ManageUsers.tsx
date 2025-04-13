@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +29,11 @@ interface ExtendedUser {
   status: "active" | "inactive";
 }
 
+interface AdminUser {
+  id: string;
+  email: string;
+}
+
 const ManageUsers = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,13 +54,15 @@ const ManageUsers = () => {
       try {
         setIsLoading(true);
         
-        // Get auth users first (to get emails)
-        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+        // Get all users first from auth admin API
+        const { data: adminData, error: adminError } = await supabase.auth.admin.listUsers() as any;
         
-        if (authError) {
-          console.error('Error fetching auth users:', authError);
-          throw authError;
+        if (adminError) {
+          console.error('Error fetching auth users:', adminError);
+          throw adminError;
         }
+        
+        const authUsers: AdminUser[] = adminData?.users || [];
         
         // Now get profiles
         const { data: profilesData, error: profilesError } = await supabase
@@ -69,12 +75,12 @@ const ManageUsers = () => {
         }
         
         // Create a map of user IDs to emails from auth data
-        const emailMap = new Map();
-        if (authData && authData.users) {
-          authData.users.forEach(authUser => {
-            emailMap.set(authUser.id, authUser.email || '');
-          });
-        }
+        const emailMap = new Map<string, string>();
+        authUsers.forEach(authUser => {
+          if (authUser.email) {
+            emailMap.set(authUser.id, authUser.email);
+          }
+        });
         
         // Map to ExtendedUser format
         const mappedUsers: ExtendedUser[] = profilesData?.map(profile => ({

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,7 +52,7 @@ const AdminAnalytics = () => {
         // Fetch real data from Supabase
         const { data: reportsData, error } = await supabase
           .from('reports')
-          .select('*');
+          .select('*') as any;
           
         if (error) {
           throw error;

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +36,7 @@ const UpdateSchedules = () => {
         const { data: schedulesData, error: schedulesError } = await supabase
           .from('pickup_schedules')
           .select('*')
-          .order('pickup_date', { ascending: true });
+          .order('pickup_date', { ascending: true }) as any;
           
         if (schedulesError) throw schedulesError;
         
@@ -96,12 +95,12 @@ const UpdateSchedules = () => {
         notes: notes.trim() || null,
         status: "scheduled",
         created_by: user?.id
-      };
+      } as any;
       
       const { data, error } = await supabase
         .from('pickup_schedules')
         .insert(newSchedule)
-        .select();
+        .select() as any;
         
       if (error) throw error;
       
@@ -132,7 +131,7 @@ const UpdateSchedules = () => {
       const { error } = await supabase
         .from('pickup_schedules')
         .delete()
-        .eq('id', id);
+        .eq('id', id) as any;
         
       if (error) throw error;
       
@@ -158,7 +157,7 @@ const UpdateSchedules = () => {
       const { error } = await supabase
         .from('pickup_schedules')
         .update({ status })
-        .eq('id', id);
+        .eq('id', id) as any;
         
       if (error) throw error;
       

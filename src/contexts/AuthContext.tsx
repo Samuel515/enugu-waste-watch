@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser({
           id: profile.id,
           name: profile.name || '',
-          email: userEmail,
+          email: profile.email || userEmail,
           role: profile.role as UserRole,
           area: profile.area,
           phoneNumber: profile.phone_number
@@ -104,18 +104,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkEmailExists = async (email: string) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .limit(1);
-      
-      if (error) {
-        console.error("Error checking email existence:", error);
-        return false;
+      // First check auth.users using getUserByEmail
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+      if (userError) {
+        console.log("Error checking email in auth:", userError);
       }
       
-      return data && data.length > 0;
+      if (userData) {
+        return true;
+      }
+      
+      // Fallback: check profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', email)
+        .single();
+      
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error("Error checking email in profiles:", profileError);
+      }
+      
+      return !!profileData;
     } catch (error) {
       console.error("Error checking email existence:", error);
       return false;
@@ -124,10 +134,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkPhoneExists = async (phone: string) => {
     try {
+      // Format phone number to ensure consistent format
+      const formattedPhone = formatPhoneNumber(phone);
+      
+      // Check profiles table
       const { data, error } = await supabase
         .from('profiles')
         .select('id')
-        .eq('phone_number', phone)
+        .eq('phone_number', formattedPhone)
         .limit(1);
       
       if (error) {
@@ -177,12 +191,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const emailExists = await checkEmailExists(email);
       if (emailExists) {
         toast({
-          title: "Error",
-          description: "This email is already registered. Please use another email or login instead.",
+          title: "Account exists",
+          description: "This email is already registered. Redirecting to login...",
           variant: "destructive",
         });
         setIsLoading(false);
-        navigate('/auth?tab=login');
+        setTimeout(() => navigate('/auth?tab=login'), 2000);
         return;
       }
       
@@ -200,6 +214,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (error) {
         throw error;
+      }
+      
+      // Update the profiles table with email
+      if (data?.user) {
+        await supabase
+          .from('profiles')
+          .update({ email })
+          .eq('id', data.user.id);
       }
       
       if (data.user) {
@@ -233,12 +255,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const phoneExists = await checkPhoneExists(formattedPhone);
       if (phoneExists) {
         toast({
-          title: "Error",
-          description: "This phone number is already registered. Please use another number or login instead.",
+          title: "Account exists",
+          description: "This phone number is already registered. Redirecting to login...",
           variant: "destructive",
         });
         setIsLoading(false);
-        navigate('/auth?tab=login');
+        setTimeout(() => navigate('/auth?tab=login'), 2000);
         return;
       }
       

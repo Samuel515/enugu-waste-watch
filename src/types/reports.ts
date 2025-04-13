@@ -25,3 +25,14 @@ export interface ReportFormData {
   location: string;
   image?: File;
 }
+
+export interface PickupSchedule {
+  id: string;
+  area: string;
+  pickup_date: string;
+  notes?: string;
+  status: "scheduled" | "completed" | "cancelled";
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}

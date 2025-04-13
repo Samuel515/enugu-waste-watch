@@ -50,11 +50,8 @@ const AdminAnalytics = () => {
     const fetchAnalyticsData = async () => {
       setIsLoading(true);
       try {
-        // In a real app, we would fetch this data from Supabase
-        // For now, we'll use mock data
-        
-        // Simulated database fetch
-        const { data: reports, error } = await supabase
+        // Fetch real data from Supabase
+        const { data: reportsData, error } = await supabase
           .from('reports')
           .select('*');
           
@@ -63,8 +60,8 @@ const AdminAnalytics = () => {
         }
         
         // If we have reports data, process it
-        if (reports) {
-          processReportsData(reports as unknown as Report[]);
+        if (reportsData && reportsData.length > 0) {
+          processReportsData(reportsData as Report[]);
         } else {
           // Use mock data if no reports exist yet
           const mockReports = generateMockReports();
@@ -105,7 +102,7 @@ const AdminAnalytics = () => {
     // Group reports by area
     const areaMap = new Map<string, number>();
     filteredReports.forEach(report => {
-      const area = report.user_area || "Unknown";
+      const area = report.user_area || report.location || "Unknown";
       areaMap.set(area, (areaMap.get(area) || 0) + 1);
     });
 

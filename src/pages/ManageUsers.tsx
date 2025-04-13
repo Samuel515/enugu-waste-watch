@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Search, UserPlus, Edit, Trash2, UserCheck, UserX } from "lucide-react";
-import { useAuth, UserRole, AppUser } from "@/contexts/AuthContext";
+import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Dialog,
@@ -50,20 +50,37 @@ const ManageUsers = () => {
       try {
         setIsLoading(true);
         
-        // Get users from profiles table
-        const { data, error } = await supabase
+        // Get auth users first (to get emails)
+        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+        
+        if (authError) {
+          console.error('Error fetching auth users:', authError);
+          throw authError;
+        }
+        
+        // Now get profiles
+        const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('*');
         
-        if (error) {
-          throw error;
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+          throw profilesError;
+        }
+        
+        // Create a map of user IDs to emails from auth data
+        const emailMap = new Map();
+        if (authData && authData.users) {
+          authData.users.forEach(authUser => {
+            emailMap.set(authUser.id, authUser.email || '');
+          });
         }
         
         // Map to ExtendedUser format
-        const mappedUsers: ExtendedUser[] = data?.map(profile => ({
+        const mappedUsers: ExtendedUser[] = profilesData?.map(profile => ({
           id: profile.id,
           name: profile.name || 'Unknown',
-          email: profile.email || 'No email',
+          email: profile.email || emailMap.get(profile.id) || 'No email',
           role: profile.role as UserRole,
           area: profile.area,
           status: "active" // All users are active by default
@@ -134,12 +151,10 @@ const ManageUsers = () => {
     if (!currentUser) return;
     
     try {
-      // Delete user from auth and profiles (cascade)
-      const { error } = await supabase.auth.admin.deleteUser(
-        currentUser.id
-      );
+      // Delete user from auth
+      const { error: authError } = await supabase.auth.admin.deleteUser(currentUser.id);
       
-      if (error) throw error;
+      if (authError) throw authError;
       
       // Update local state
       setUsers(users.filter((u) => u.id !== currentUser.id));
@@ -171,7 +186,8 @@ const ManageUsers = () => {
         .update({
           name: editName,
           role: editRole,
-          area: editArea || null
+          area: editArea || null,
+          email: editEmail
         })
         .eq('id', currentUser.id);
       
@@ -184,6 +200,7 @@ const ManageUsers = () => {
             ? {
                 ...u,
                 name: editName,
+                email: editEmail,
                 role: editRole,
                 area: editArea || null
               }
@@ -403,8 +420,8 @@ const ManageUsers = () => {
               <Input
                 id="email"
                 value={editEmail}
-                disabled
-                className="col-span-3 bg-muted"
+                onChange={(e) => setEditEmail(e.target.value)}
+                className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">

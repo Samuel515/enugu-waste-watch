@@ -27,6 +27,7 @@ import CookiePolicy from "./pages/legal/CookiePolicy";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import ManageReports from "./pages/ManageReports";
 import ReportDetail from "./pages/ReportDetail";
+import UpdateSchedules from "./pages/UpdateSchedules";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
               <Route path="/manage-reports" element={<ManageReports />} />
               <Route path="/reports/:reportId" element={<ReportDetail />} />
+              <Route path="/update-schedules" element={<UpdateSchedules />} />
               <Route path="/about" element={<About />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/profile" element={<Profile />} />

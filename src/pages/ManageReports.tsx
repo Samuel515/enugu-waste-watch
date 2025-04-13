@@ -24,15 +24,16 @@ const ManageReports = () => {
     const fetchReports = async () => {
       setIsLoading(true);
       try {
-        // In a real app, fetch from Supabase
+        // Fetch reports from Supabase
         const { data, error } = await supabase
           .from('reports')
-          .select('*');
+          .select('*')
+          .order('created_at', { ascending: false });
         
         if (error) throw error;
         
-        if (data) {
-          setReports(data as unknown as Report[]);
+        if (data && data.length > 0) {
+          setReports(data as Report[]);
         } else {
           // Use mock data if no reports exist yet
           const mockReports = generateMockReports();

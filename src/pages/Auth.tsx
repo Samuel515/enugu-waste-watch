@@ -48,7 +48,7 @@ const Auth = () => {
           <Alert variant="destructive" className="mb-4">
             <AlertTitle>Email already registered</AlertTitle>
             <AlertDescription>
-              Please sign in with your existing account.
+              This email is already associated with an account. Please sign in with your existing account.
             </AlertDescription>
           </Alert>
         )}
@@ -57,7 +57,7 @@ const Auth = () => {
           <Alert variant="destructive" className="mb-4">
             <AlertTitle>Phone number already registered</AlertTitle>
             <AlertDescription>
-              Please sign in with your existing account.
+              This phone number is already associated with an account. Please sign in with your existing account.
             </AlertDescription>
           </Alert>
         )}
@@ -72,7 +72,7 @@ const Auth = () => {
         )}
         
         <div className="bg-card shadow-lg rounded-lg p-6 border">
-          <AuthTabs />
+          <AuthTabs defaultTab={defaultTab} />
         </div>
       </div>
     </Layout>

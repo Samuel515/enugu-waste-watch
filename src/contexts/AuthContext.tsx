@@ -100,26 +100,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const checkEmailExists = async (email: string) => {
+  const checkEmailExists = async (email: string): Promise<boolean> => {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('email')
         .eq('email', email)
-        .single();
+        .limit(1);
       
       if (profileError && profileError.code !== 'PGRST116') {
         console.error("Error checking email in profiles:", profileError);
       }
       
-      return !!profileData;
+      if (profileData && profileData.length > 0) {
+        console.log("Email found in profiles table");
+        return true;
+      }
+      
+      return false;
     } catch (error) {
       console.error("Error checking email existence:", error);
       return false;
     }
   };
 
-  const checkPhoneExists = async (phone: string) => {
+  const checkPhoneExists = async (phone: string): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phone);
       
@@ -441,7 +446,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return '+234' + digitsOnly.substring(1);
     }
     
-    return '+234' + digitsOnly;
+    if (!digitsOnly.startsWith('+234') && !digitsOnly.startsWith('234')) {
+      return '+234' + digitsOnly;
+    }
+    
+    return digitsOnly.startsWith('+') ? digitsOnly : '+' + digitsOnly;
   };
 
   const value = {

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User, Mail, Lock, MapPin, Phone } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const RegisterForm = () => {
@@ -28,6 +28,23 @@ const RegisterForm = () => {
   const { signupWithEmail, signupWithPhone, signInWithGoogle, signInWithApple, checkEmailExists, checkPhoneExists } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Clear form on tab switch
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get("tab");
+    
+    if (tab === "register") {
+      setName("");
+      setEmail("");
+      setPhoneNumber("");
+      setPassword("");
+      setConfirmPassword("");
+      setRole("resident");
+      setArea("");
+    }
+  }, [location]);
 
   const handleEmailBlur = async () => {
     if (email && email.includes('@')) {
@@ -41,7 +58,7 @@ const RegisterForm = () => {
             variant: "destructive",
           });
           setTimeout(() => {
-            navigate('/auth?tab=login');
+            navigate('/auth?tab=login&reason=email-exists');
           }, 2000);
         }
       } catch (error) {
@@ -64,7 +81,7 @@ const RegisterForm = () => {
             variant: "destructive",
           });
           setTimeout(() => {
-            navigate('/auth?tab=login');
+            navigate('/auth?tab=login&reason=phone-exists');
           }, 2000);
         }
       } catch (error) {
@@ -119,7 +136,7 @@ const RegisterForm = () => {
         });
         setIsLoading(false);
         setTimeout(() => {
-          navigate('/auth?tab=login');
+          navigate('/auth?tab=login&reason=email-exists');
         }, 2000);
         return;
       }
@@ -179,7 +196,7 @@ const RegisterForm = () => {
         });
         setIsLoading(false);
         setTimeout(() => {
-          navigate('/auth?tab=login');
+          navigate('/auth?tab=login&reason=phone-exists');
         }, 2000);
         return;
       }
@@ -466,7 +483,7 @@ const RegisterForm = () => {
               className="w-full" 
               onClick={() => {
                 setShowSuccessDialog(false);
-                navigate('/auth?tab=login');
+                navigate('/auth?tab=login&reason=email-verification');
               }}
             >
               Go to Login

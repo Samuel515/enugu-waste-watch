@@ -61,6 +61,15 @@ const Auth = () => {
             </AlertDescription>
           </Alert>
         )}
+
+        {redirectReason === "email-verification" && (
+          <Alert className="mb-4 border-waste-green bg-waste-green/10">
+            <AlertTitle>Email verification required</AlertTitle>
+            <AlertDescription>
+              Please check your email and click the verification link before logging in.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="bg-card shadow-lg rounded-lg p-6 border">
           <AuthTabs />

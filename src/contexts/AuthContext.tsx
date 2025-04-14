@@ -84,7 +84,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if (profile) {
-        // Fixed type error here by using optional chaining and empty string fallback
         const userEmail = session?.user?.email || '';
         
         setUser({
@@ -103,8 +102,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkEmailExists = async (email: string) => {
     try {
-      // Remove the call to getUserByEmail which doesn't exist
-      // Instead, check directly in the profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('email')
@@ -124,10 +121,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkPhoneExists = async (phone: string) => {
     try {
-      // Format phone number to ensure consistent format
       const formattedPhone = formatPhoneNumber(phone);
       
-      // Check profiles table
       const { data, error } = await supabase
         .from('profiles')
         .select('id')
@@ -148,17 +143,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
       if (error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        if (error.message.includes("Email not confirmed")) {
+          toast({
+            title: "Email not verified",
+            description: "Please check your email and verify your account before logging in.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Login failed",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
         throw error;
       }
 
@@ -199,6 +202,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             role,
             area,
           },
+          emailRedirectTo: `${window.location.origin}/auth?tab=login&reason=email-verification`,
         },
       });
       
@@ -206,7 +210,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw error;
       }
       
-      // Update the profiles table with email
       if (data?.user) {
         await supabase
           .from('profiles')
@@ -215,10 +218,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       if (data.user) {
-        toast({
-          title: "Success",
-          description: "Your account has been created successfully.",
-        });
+        console.log("Registration successful, email verification required");
+        await supabase.auth.signOut();
       }
     } catch (error: any) {
       console.error("Signup error:", error);
@@ -254,7 +255,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
       
-      // Send OTP via SMS
       const { data, error } = await supabase.auth.signInWithOtp({
         phone: formattedPhone,
         options: {
@@ -263,7 +263,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             name,
             role,
             area,
-            password, // Store temporarily to create user after verification
+            password,
           }
         }
       });
@@ -275,7 +275,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setNeedPhoneVerification(true);
       setPhone(formattedPhone);
       
-      // Redirect to verification page with phone number as query param
       navigate(`/auth?tab=verify&phone=${encodeURIComponent(formattedPhone)}`);
       
       toast({

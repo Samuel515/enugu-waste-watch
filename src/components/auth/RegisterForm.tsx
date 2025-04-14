@@ -4,11 +4,12 @@ import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User, Mail, Lock, MapPin, Phone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const RegisterForm = () => {
   const [name, setName] = useState("");
@@ -21,6 +22,8 @@ const RegisterForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [checkingPhone, setCheckingPhone] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
   
   const { signupWithEmail, signupWithPhone, signInWithGoogle, signInWithApple, checkEmailExists, checkPhoneExists } = useAuth();
   const { toast } = useToast();
@@ -122,6 +125,9 @@ const RegisterForm = () => {
       }
       
       await signupWithEmail(name, email, password, role, role === "resident" ? area : undefined);
+      // Store the email and show success dialog
+      setRegisteredEmail(email);
+      setShowSuccessDialog(true);
     } catch (error) {
       console.error("Registration error:", error);
     } finally {
@@ -438,6 +444,36 @@ const RegisterForm = () => {
           Apple
         </Button>
       </div>
+
+      {/* Email Verification Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl">Verify Your Email</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center p-4">
+            <Mail className="h-16 w-16 text-waste-green mb-4" />
+            <h3 className="text-lg font-medium">Registration Successful!</h3>
+            <p className="text-center mt-2 mb-4 text-muted-foreground">
+              We've sent a confirmation link to:
+              <span className="block font-medium text-foreground mt-1">{registeredEmail}</span>
+            </p>
+            <p className="text-center text-sm mb-6">
+              Please check your inbox and click the verification link to activate your account.
+              <span className="block mt-2">You must verify your email before logging in.</span>
+            </p>
+            <Button 
+              className="w-full" 
+              onClick={() => {
+                setShowSuccessDialog(false);
+                navigate('/auth?tab=login');
+              }}
+            >
+              Go to Login
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

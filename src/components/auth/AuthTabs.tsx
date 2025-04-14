@@ -6,12 +6,16 @@ import RegisterForm from "@/components/auth/RegisterForm";
 import PhoneVerification from "@/components/auth/PhoneVerification";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
-const AuthTabs = () => {
+interface AuthTabsProps {
+  defaultTab?: string;
+}
+
+const AuthTabs = ({ defaultTab = "login" }: AuthTabsProps) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
   // Get tab from URL query parameter
-  const tab = searchParams.get("tab") || "login";
+  const tab = searchParams.get("tab") || defaultTab;
   
   // Update URL when tab changes
   const handleTabChange = (value: string) => {

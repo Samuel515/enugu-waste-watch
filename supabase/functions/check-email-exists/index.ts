@@ -1,6 +1,4 @@
 
-// supabase/functions/check-email-exists/index.ts
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
 const corsHeaders = {
@@ -55,33 +53,9 @@ Deno.serve(async (req) => {
       (user) => user.email && user.email.toLowerCase() === email.toLowerCase()
     )
 
-    if (userExists) {
-      return new Response(JSON.stringify({ exists: true }), { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // If not found in auth users, check in profiles table
-    const { data: profileData, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('email')
-      .ilike('email', email)
-      .limit(1)
-
-    if (profileError) {
-      console.error('Error checking profiles:', profileError)
-      return new Response(JSON.stringify({ error: 'Error checking profile data' }), { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const exists = profileData && profileData.length > 0
-
-    return new Response(JSON.stringify({ exists }), { 
+    return new Response(JSON.stringify({ exists: userExists }), { 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
-
   } catch (error) {
     console.error('Error:', error)
     return new Response(JSON.stringify({ error: 'Internal server error' }), { 

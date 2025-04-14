@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import AuthTabs from "@/components/auth/AuthTabs";
 import { Leaf } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const Auth = () => {
   const { isAuthenticated } = useAuth();
@@ -14,6 +15,7 @@ const Auth = () => {
   // Get tab from URL query parameter
   const searchParams = new URLSearchParams(location.search);
   const defaultTab = searchParams.get("tab") || "login";
+  const redirectReason = searchParams.get("reason");
   
   // Scroll to top when component mounts
   useEffect(() => {
@@ -41,6 +43,24 @@ const Auth = () => {
             </p>
           </div>
         </div>
+        
+        {redirectReason === "email-exists" && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Email already registered</AlertTitle>
+            <AlertDescription>
+              Please sign in with your existing account.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {redirectReason === "phone-exists" && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Phone number already registered</AlertTitle>
+            <AlertDescription>
+              Please sign in with your existing account.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="bg-card shadow-lg rounded-lg p-6 border">
           <AuthTabs />

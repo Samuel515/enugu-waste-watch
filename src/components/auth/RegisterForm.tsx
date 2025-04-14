@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { User, Mail, Lock, MapPin, Phone } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const RegisterForm = () => {
   const [name, setName] = useState("");
@@ -18,9 +19,58 @@ const RegisterForm = () => {
   const [role, setRole] = useState<UserRole>("resident");
   const [area, setArea] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
   
-  const { signupWithEmail, signupWithPhone, signInWithGoogle, signInWithApple } = useAuth();
+  const { signupWithEmail, signupWithPhone, signInWithGoogle, signInWithApple, checkEmailExists, checkPhoneExists } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleEmailBlur = async () => {
+    if (email && email.includes('@')) {
+      setCheckingEmail(true);
+      try {
+        const exists = await checkEmailExists(email);
+        if (exists) {
+          toast({
+            title: "Email already registered",
+            description: "This email is already registered. Redirecting to login...",
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            navigate('/auth?tab=login');
+          }, 2000);
+        }
+      } catch (error) {
+        console.error("Error checking email:", error);
+      } finally {
+        setCheckingEmail(false);
+      }
+    }
+  };
+
+  const handlePhoneBlur = async () => {
+    if (phoneNumber && phoneNumber.length >= 10) {
+      setCheckingPhone(true);
+      try {
+        const exists = await checkPhoneExists(phoneNumber);
+        if (exists) {
+          toast({
+            title: "Phone number already registered",
+            description: "This phone number is already registered. Redirecting to login...",
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            navigate('/auth?tab=login');
+          }, 2000);
+        }
+      } catch (error) {
+        console.error("Error checking phone:", error);
+      } finally {
+        setCheckingPhone(false);
+      }
+    }
+  };
 
   const handleEmailSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -55,7 +105,22 @@ const RegisterForm = () => {
     
     setIsLoading(true);
     
+    // First check if email exists
     try {
+      const exists = await checkEmailExists(email);
+      if (exists) {
+        toast({
+          title: "Email already registered",
+          description: "This email is already registered. Redirecting to login...",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        setTimeout(() => {
+          navigate('/auth?tab=login');
+        }, 2000);
+        return;
+      }
+      
       await signupWithEmail(name, email, password, role, role === "resident" ? area : undefined);
     } catch (error) {
       console.error("Registration error:", error);
@@ -97,7 +162,22 @@ const RegisterForm = () => {
     
     setIsLoading(true);
     
+    // First check if phone exists
     try {
+      const exists = await checkPhoneExists(phoneNumber);
+      if (exists) {
+        toast({
+          title: "Phone number already registered",
+          description: "This phone number is already registered. Redirecting to login...",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        setTimeout(() => {
+          navigate('/auth?tab=login');
+        }, 2000);
+        return;
+      }
+      
       await signupWithPhone(name, phoneNumber, password, role, role === "resident" ? area : undefined);
     } catch (error) {
       console.error("Phone registration error:", error);
@@ -182,8 +262,9 @@ const RegisterForm = () => {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onBlur={handleEmailBlur}
                   className="pl-10"
-                  disabled={isLoading}
+                  disabled={isLoading || checkingEmail}
                 />
               </div>
             </div>
@@ -224,8 +305,8 @@ const RegisterForm = () => {
             
             {renderRoleAndAreaFields()}
             
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Sign Up"}
+            <Button type="submit" className="w-full" disabled={isLoading || checkingEmail}>
+              {isLoading ? "Creating account..." : checkingEmail ? "Checking email..." : "Sign Up"}
             </Button>
           </form>
         </TabsContent>
@@ -267,8 +348,9 @@ const RegisterForm = () => {
                       setPhoneNumber(value);
                     }
                   }}
+                  onBlur={handlePhoneBlur}
                   className="pl-16"
-                  disabled={isLoading}
+                  disabled={isLoading || checkingPhone}
                 />
               </div>
               <p className="text-xs text-muted-foreground">Format: Nigerian mobile number without the country code</p>
@@ -310,8 +392,8 @@ const RegisterForm = () => {
             
             {renderRoleAndAreaFields()}
             
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Sign Up with Phone"}
+            <Button type="submit" className="w-full" disabled={isLoading || checkingPhone}>
+              {isLoading ? "Creating account..." : checkingPhone ? "Checking phone..." : "Sign Up with Phone"}
             </Button>
           </form>
         </TabsContent>

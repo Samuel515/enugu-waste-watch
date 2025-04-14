@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,8 @@ const RegisterForm = () => {
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
+  const [emailExists, setEmailExists] = useState(false);
+  const [phoneExists, setPhoneExists] = useState(false);
   
   const { signupWithEmail, signupWithPhone, signInWithGoogle, signInWithApple, checkEmailExists, checkPhoneExists } = useAuth();
   const { toast } = useToast();
@@ -43,6 +44,8 @@ const RegisterForm = () => {
       setConfirmPassword("");
       setRole("resident");
       setArea("");
+      setEmailExists(false);
+      setPhoneExists(false);
     }
   }, [location]);
 
@@ -51,15 +54,13 @@ const RegisterForm = () => {
       setCheckingEmail(true);
       try {
         const exists = await checkEmailExists(email);
+        setEmailExists(exists);
         if (exists) {
           toast({
             title: "Email already registered",
-            description: "This email is already registered. Redirecting to login...",
+            description: "This email is already registered. Please use a different email or sign in.",
             variant: "destructive",
           });
-          setTimeout(() => {
-            navigate('/auth?tab=login&reason=email-exists');
-          }, 2000);
         }
       } catch (error) {
         console.error("Error checking email:", error);
@@ -74,15 +75,13 @@ const RegisterForm = () => {
       setCheckingPhone(true);
       try {
         const exists = await checkPhoneExists(phoneNumber);
+        setPhoneExists(exists);
         if (exists) {
           toast({
             title: "Phone number already registered",
-            description: "This phone number is already registered. Redirecting to login...",
+            description: "This phone number is already registered. Please use a different number or sign in.",
             variant: "destructive",
           });
-          setTimeout(() => {
-            navigate('/auth?tab=login&reason=phone-exists');
-          }, 2000);
         }
       } catch (error) {
         console.error("Error checking phone:", error);
@@ -122,11 +121,20 @@ const RegisterForm = () => {
       });
       return;
     }
+
+    if (emailExists) {
+      toast({
+        title: "Email already registered",
+        description: "Please use a different email or sign in with your existing account.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsLoading(true);
     
-    // First check if email exists
     try {
+      // One final check for email existence
       const exists = await checkEmailExists(email);
       if (exists) {
         toast({
@@ -182,11 +190,20 @@ const RegisterForm = () => {
       });
       return;
     }
+
+    if (phoneExists) {
+      toast({
+        title: "Phone number already registered",
+        description: "Please use a different phone number or sign in with your existing account.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsLoading(true);
     
-    // First check if phone exists
     try {
+      // One final check for phone existence
       const exists = await checkPhoneExists(phoneNumber);
       if (exists) {
         toast({
@@ -284,12 +301,20 @@ const RegisterForm = () => {
                   type="email"
                   placeholder="Enter your email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailExists(false);
+                  }}
                   onBlur={handleEmailBlur}
-                  className="pl-10"
+                  className={`pl-10 ${emailExists ? "border-red-500" : ""}`}
                   disabled={isLoading || checkingEmail}
                 />
               </div>
+              {emailExists && (
+                <p className="text-sm text-red-500 mt-1">
+                  This email is already registered.
+                </p>
+              )}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -328,7 +353,7 @@ const RegisterForm = () => {
             
             {renderRoleAndAreaFields()}
             
-            <Button type="submit" className="w-full" disabled={isLoading || checkingEmail}>
+            <Button type="submit" className="w-full" disabled={isLoading || checkingEmail || emailExists}>
               {isLoading ? "Creating account..." : checkingEmail ? "Checking email..." : "Sign Up"}
             </Button>
           </form>
@@ -369,13 +394,19 @@ const RegisterForm = () => {
                     const value = e.target.value.replace(/\D/g, '');
                     if (value.length <= 10) {
                       setPhoneNumber(value);
+                      setPhoneExists(false);
                     }
                   }}
                   onBlur={handlePhoneBlur}
-                  className="pl-16"
+                  className={`pl-16 ${phoneExists ? "border-red-500" : ""}`}
                   disabled={isLoading || checkingPhone}
                 />
               </div>
+              {phoneExists && (
+                <p className="text-sm text-red-500 mt-1">
+                  This phone number is already registered.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">Format: Nigerian mobile number without the country code</p>
             </div>
             
@@ -415,7 +446,7 @@ const RegisterForm = () => {
             
             {renderRoleAndAreaFields()}
             
-            <Button type="submit" className="w-full" disabled={isLoading || checkingPhone}>
+            <Button type="submit" className="w-full" disabled={isLoading || checkingPhone || phoneExists}>
               {isLoading ? "Creating account..." : checkingPhone ? "Checking phone..." : "Sign Up with Phone"}
             </Button>
           </form>

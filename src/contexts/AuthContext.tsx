@@ -102,14 +102,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkEmailExists = async (email: string): Promise<boolean> => {
     try {
+      console.log("Checking if email exists:", email);
+      
+      // First, check if this email exists in auth.users (through auth API)
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (!authError && authData) {
+        const userExists = authData.users.some(
+          user => user.email && user.email.toLowerCase() === email.toLowerCase()
+        );
+        
+        if (userExists) {
+          console.log("Email found in auth users");
+          return true;
+        }
+      }
+      
+      // Then check in the profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('email')
-        .eq('email', email)
+        .ilike('email', email)
         .limit(1);
       
-      if (profileError && profileError.code !== 'PGRST116') {
+      if (profileError) {
         console.error("Error checking email in profiles:", profileError);
+        throw profileError;
       }
       
       if (profileData && profileData.length > 0) {
@@ -117,9 +135,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return true;
       }
       
+      console.log("Email not found, it's available");
       return false;
     } catch (error) {
       console.error("Error checking email existence:", error);
+      // Default to false on error to prevent potential duplicates
       return false;
     }
   };
@@ -194,7 +214,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           variant: "destructive",
         });
         setIsLoading(false);
-        setTimeout(() => navigate('/auth?tab=login'), 2000);
+        setTimeout(() => navigate('/auth?tab=login&reason=email-exists'), 2000);
         return;
       }
       
@@ -256,7 +276,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           variant: "destructive",
         });
         setIsLoading(false);
-        setTimeout(() => navigate('/auth?tab=login'), 2000);
+        setTimeout(() => navigate('/auth?tab=login&reason=phone-exists'), 2000);
         return;
       }
       

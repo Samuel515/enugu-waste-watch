@@ -1,1 +1,26 @@
+
 project_id = "ppmlqsfcpjedjitnamti"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+shadow_port = 54320
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[auth]
+enable_signup = true
+
+[storage]
+enabled = true
+
+[functions]
+[functions.check-email-exists]
+verify_jwt = true

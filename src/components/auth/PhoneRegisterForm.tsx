@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,7 @@ const PhoneRegisterForm = () => {
     if (phoneNumber && phoneNumber.length >= 10) {
       setCheckingPhone(true);
       try {
-        // Check if phone exists by passing just the last 10 digits
+        // Format phone number with +234 prefix for existence check
         const exists = await checkPhoneExists(phoneNumber);
         console.log("Phone exists check returned:", exists);
         setPhoneExists(exists);

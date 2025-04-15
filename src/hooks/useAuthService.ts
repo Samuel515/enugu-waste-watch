@@ -55,13 +55,15 @@ export const useAuthService = () => {
 
   const checkPhoneExists = async (phone: string): Promise<boolean> => {
     try {
-      const formattedPhone = formatPhoneNumber(phone);
+      // Format the phone number with +234 prefix for comparison
+      const digitsOnly = phone.replace(/\D/g, '');
+      const formattedPhone = `+234${digitsOnly.slice(-10)}`;
       console.log("Checking if phone exists:", formattedPhone);
       
       const { data, error } = await supabase
         .from('profiles')
         .select('id, phone_number')
-        .filter('phone_number', 'ilike', `%${phone.replace(/\D/g, '').slice(-10)}%`)
+        .eq('phone_number', formattedPhone)
         .limit(1);
       
       if (error) {
@@ -217,25 +219,23 @@ export const useAuthService = () => {
   };
 
   const formatPhoneNumber = (phoneNumber: string): string => {
+    // Remove all non-digit characters
     const digitsOnly = phoneNumber.replace(/\D/g, '');
     
-    if (digitsOnly.startsWith('0')) {
-      return '+234' + digitsOnly.substring(1);
-    }
+    // Extract the last 10 digits
+    const lastTenDigits = digitsOnly.slice(-10);
     
-    if (!digitsOnly.startsWith('+234') && !digitsOnly.startsWith('234')) {
-      return '+234' + digitsOnly;
-    }
-    
-    return digitsOnly.startsWith('+') ? digitsOnly : '+' + digitsOnly;
+    // Always return with +234 prefix
+    return `+234${lastTenDigits}`;
   };
 
   const verifyPhone = async (phoneNumber: string, token: string) => {
     try {
-      console.log("Verifying phone:", phoneNumber, "with token:", token);
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+      console.log("Verifying phone:", formattedPhone, "with token:", token);
       
       const { data, error } = await supabase.auth.verifyOtp({
-        phone: phoneNumber,
+        phone: formattedPhone,
         token,
         type: 'sms'
       });
@@ -297,16 +297,15 @@ export const useAuthService = () => {
 
   const signInWithPhone = async (phoneNumber: string, password: string) => {
     try {
+      // Format the phone number with +234 prefix
       const formattedPhone = formatPhoneNumber(phoneNumber);
       console.log("Signing in with phone:", formattedPhone);
       
-      // First, check if this user exists by searching for the last 10 digits
-      const lastTenDigits = phoneNumber.replace(/\D/g, '').slice(-10);
-      
+      // Check if user exists with exact phone number match
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('id, phone_number')
-        .filter('phone_number', 'ilike', `%${lastTenDigits}%`);
+        .eq('phone_number', formattedPhone);
       
       if (profileError || !profiles || profiles.length === 0) {
         console.error("No user found with this phone number");
@@ -320,7 +319,7 @@ export const useAuthService = () => {
       
       console.log("Found matching profiles:", profiles);
       
-      // Send OTP for verification first
+      // Send OTP for verification
       const { error } = await supabase.auth.signInWithOtp({
         phone: formattedPhone,
         options: { shouldCreateUser: false }

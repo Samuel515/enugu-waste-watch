@@ -62,7 +62,7 @@ const About = () => {
                   </li>
                   <li className="flex justify-between">
                     <span>Collection vehicles:</span>
-                    <span className="font-medium">~45 (many needing repair)</span>
+                    <span className="font-medium">~45</span>
                   </li>
                 </ul>
               </div>

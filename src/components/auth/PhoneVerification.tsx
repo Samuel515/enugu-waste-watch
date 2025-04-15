@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ const PhoneVerification = () => {
   const [resendTime, setResendTime] = useState(60);
   const [isFromLogin, setIsFromLogin] = useState(false);
   
-  const { verifyPhone, formatPhoneNumber } = useAuth();
+  const { verifyPhone } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -34,8 +35,6 @@ const PhoneVerification = () => {
       });
       navigate("/auth?tab=login");
     }
-    
-    console.log("Verification page loaded for phone:", phoneNumber);
   }, [phoneNumber, navigate, toast]);
 
   // Countdown timer for resend button
@@ -64,7 +63,6 @@ const PhoneVerification = () => {
     }
     
     setIsLoading(true);
-    console.log("Submitting verification code:", verificationCode, "for phone:", phoneNumber);
     
     try {
       await verifyPhone(phoneNumber, verificationCode);
@@ -91,23 +89,16 @@ const PhoneVerification = () => {
   const handleResend = async () => {
     try {
       setHasResent(true);
-      console.log("Resending verification code to:", phoneNumber);
       
       const { supabase } = await import("@/integrations/supabase/client");
-      const formattedPhone = formatPhoneNumber(phoneNumber);
       
       // Resend OTP
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+      await supabase.auth.signInWithOtp({
+        phone: phoneNumber,
         options: {
           shouldCreateUser: false
         }
       });
-      
-      if (error) {
-        console.error("Error resending code:", error);
-        throw error;
-      }
       
       toast({
         title: "Code resent",

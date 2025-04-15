@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,7 +49,6 @@ export const useAuthService = () => {
       return data?.exists || false;
     } catch (error) {
       console.error("Error checking email existence:", error);
-      // Default to false on error to prevent potential duplicates
       return false;
     }
   };
@@ -62,8 +60,8 @@ export const useAuthService = () => {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('phone_number', formattedPhone)
+        .select('id, phone_number')
+        .filter('phone_number', 'ilike', `%${phone.replace(/\D/g, '').slice(-10)}%`)
         .limit(1);
       
       if (error) {
@@ -302,11 +300,13 @@ export const useAuthService = () => {
       const formattedPhone = formatPhoneNumber(phoneNumber);
       console.log("Signing in with phone:", formattedPhone);
       
-      // First, check if this user exists
+      // First, check if this user exists by searching for the last 10 digits
+      const lastTenDigits = phoneNumber.replace(/\D/g, '').slice(-10);
+      
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('phone_number', formattedPhone);
+        .select('id, phone_number')
+        .filter('phone_number', 'ilike', `%${lastTenDigits}%`);
       
       if (profileError || !profiles || profiles.length === 0) {
         console.error("No user found with this phone number");
@@ -317,6 +317,8 @@ export const useAuthService = () => {
         });
         return;
       }
+      
+      console.log("Found matching profiles:", profiles);
       
       // Send OTP for verification first
       const { error } = await supabase.auth.signInWithOtp({

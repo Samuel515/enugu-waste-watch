@@ -28,7 +28,7 @@ const PhoneRegisterForm = () => {
     if (phoneNumber && phoneNumber.length >= 10) {
       setCheckingPhone(true);
       try {
-        // Make sure to wait for the result
+        // Check if phone exists by passing just the last 10 digits
         const exists = await checkPhoneExists(phoneNumber);
         console.log("Phone exists check returned:", exists);
         setPhoneExists(exists);

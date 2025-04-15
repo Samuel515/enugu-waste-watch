@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Check, Smartphone } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
@@ -19,12 +19,23 @@ const PhoneVerification = () => {
   
   const { verifyPhone } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check if this verification is from login by checking localStorage
     const hasLoginPassword = !!localStorage.getItem('phoneLoginPassword');
     setIsFromLogin(hasLoginPassword);
-  }, []);
+    
+    // If no phone number is provided, redirect to login
+    if (!phoneNumber) {
+      toast({
+        title: "Missing information",
+        description: "Phone number is required for verification",
+        variant: "destructive",
+      });
+      navigate("/auth?tab=login");
+    }
+  }, [phoneNumber, navigate, toast]);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -103,6 +114,18 @@ const PhoneVerification = () => {
     }
   };
 
+  // Format the phone number for display
+  const formatPhoneForDisplay = (phone: string) => {
+    // Extract the last 10 digits if it's longer
+    const digitsOnly = phone.replace(/\D/g, '');
+    const lastTenDigits = digitsOnly.slice(-10);
+    
+    if (lastTenDigits.length === 10) {
+      return `+234 ${lastTenDigits.substring(0, 3)} ${lastTenDigits.substring(3, 6)} ${lastTenDigits.substring(6)}`;
+    }
+    return phone;
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-4">
@@ -111,7 +134,7 @@ const PhoneVerification = () => {
         </div>
         <h2 className="text-xl font-medium">{isFromLogin ? "Verify to Log In" : "Verify Your Phone Number"}</h2>
         <p className="text-muted-foreground text-sm mt-2">
-          We've sent a verification code to <span className="font-medium">{phoneNumber}</span>
+          We've sent a verification code to <span className="font-medium">{formatPhoneForDisplay(phoneNumber)}</span>
         </p>
       </div>
       

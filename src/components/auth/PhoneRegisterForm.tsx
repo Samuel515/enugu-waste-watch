@@ -103,9 +103,18 @@ const PhoneRegisterForm = () => {
         return;
       }
       
-      await signupWithPhone(name, phoneNumber, password, role, role === "resident" ? area : undefined);
+      const result = await signupWithPhone(name, phoneNumber, password, role, role === "resident" ? area : undefined);
+      if (result && result.success && result.phone) {
+        // Redirect to verification page
+        navigate(`/auth?tab=verify&phone=${encodeURIComponent(result.phone)}`);
+      }
     } catch (error) {
       console.error("Phone registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: "There was an error during registration. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

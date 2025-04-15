@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,8 +28,11 @@ const PhoneRegisterForm = () => {
     if (phoneNumber && phoneNumber.length >= 10) {
       setCheckingPhone(true);
       try {
+        // Make sure to wait for the result
         const exists = await checkPhoneExists(phoneNumber);
+        console.log("Phone exists check returned:", exists);
         setPhoneExists(exists);
+        
         if (exists) {
           toast({
             title: "Phone number already registered",
@@ -76,36 +79,30 @@ const PhoneRegisterForm = () => {
       return;
     }
 
-    if (phoneExists) {
-      toast({
-        title: "Phone number already registered",
-        description: "Please use a different phone number or sign in with your existing account.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     setIsLoading(true);
     
     try {
-      // One final check for phone existence
+      // Double-check phone number existence
       const exists = await checkPhoneExists(phoneNumber);
       if (exists) {
+        setPhoneExists(true);
         toast({
           title: "Phone number already registered",
-          description: "This phone number is already registered. Redirecting to login...",
+          description: "This phone number is already registered. Please use a different number or sign in.",
           variant: "destructive",
         });
         setIsLoading(false);
-        setTimeout(() => {
-          navigate('/auth?tab=login&reason=phone-exists');
-        }, 2000);
         return;
       }
       
       const result = await signupWithPhone(name, phoneNumber, password, role, role === "resident" ? area : undefined);
+      
       if (result && result.success && result.phone) {
         // Redirect to verification page
+        toast({
+          title: "Verification code sent",
+          description: "Please enter the verification code sent to your phone number."
+        });
         navigate(`/auth?tab=verify&phone=${encodeURIComponent(result.phone)}`);
       }
     } catch (error) {
@@ -155,6 +152,7 @@ const PhoneRegisterForm = () => {
               const value = e.target.value.replace(/\D/g, '');
               if (value.length <= 10) {
                 setPhoneNumber(value);
+                // Reset the exists flag when user types
                 setPhoneExists(false);
               }
             }}

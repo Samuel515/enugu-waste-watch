@@ -15,9 +15,16 @@ const PhoneVerification = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [hasResent, setHasResent] = useState(false);
   const [resendTime, setResendTime] = useState(60);
+  const [isFromLogin, setIsFromLogin] = useState(false);
   
   const { verifyPhone } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Check if this verification is from login by checking localStorage
+    const hasLoginPassword = !!localStorage.getItem('phoneLoginPassword');
+    setIsFromLogin(hasLoginPassword);
+  }, []);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -50,7 +57,9 @@ const PhoneVerification = () => {
       await verifyPhone(phoneNumber, verificationCode);
       toast({
         title: "Success",
-        description: "Phone number verified successfully",
+        description: isFromLogin ? 
+          "Phone number verified and logged in successfully" : 
+          "Phone number verified and account created successfully"
       });
     } catch (error) {
       console.error("Verification error:", error);
@@ -61,15 +70,37 @@ const PhoneVerification = () => {
       });
     } finally {
       setIsLoading(false);
+      // Clear temporary login data
+      localStorage.removeItem('phoneLoginPassword');
     }
   };
 
-  const handleResend = () => {
-    setHasResent(true);
-    toast({
-      title: "Code resent",
-      description: "A new verification code has been sent to your phone number",
-    });
+  const handleResend = async () => {
+    try {
+      setHasResent(true);
+      
+      const { supabase } = await import("@/integrations/supabase/client");
+      
+      // Resend OTP
+      await supabase.auth.signInWithOtp({
+        phone: phoneNumber,
+        options: {
+          shouldCreateUser: false
+        }
+      });
+      
+      toast({
+        title: "Code resent",
+        description: "A new verification code has been sent to your phone number",
+      });
+    } catch (error) {
+      console.error("Error resending code:", error);
+      toast({
+        title: "Failed to resend code",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -78,7 +109,7 @@ const PhoneVerification = () => {
         <div className="bg-waste-green/20 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
           <Smartphone className="h-8 w-8 text-waste-green" />
         </div>
-        <h2 className="text-xl font-medium">Verify Your Phone Number</h2>
+        <h2 className="text-xl font-medium">{isFromLogin ? "Verify to Log In" : "Verify Your Phone Number"}</h2>
         <p className="text-muted-foreground text-sm mt-2">
           We've sent a verification code to <span className="font-medium">{phoneNumber}</span>
         </p>

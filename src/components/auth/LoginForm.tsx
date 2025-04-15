@@ -17,6 +17,7 @@ const LoginForm = () => {
   const [email, setEmail] = useState(emailFromURL || "");
   const [password, setPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [phonePassword, setPhonePassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login, signInWithPhone, signInWithGoogle, signInWithApple } = useAuth();
   const { toast } = useToast();
@@ -47,7 +48,7 @@ const LoginForm = () => {
   const handlePhoneLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!phoneNumber || !password) {
+    if (!phoneNumber || !phonePassword) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -59,7 +60,7 @@ const LoginForm = () => {
     setIsLoading(true);
     
     try {
-      await signInWithPhone(phoneNumber, password);
+      await signInWithPhone(phoneNumber, phonePassword);
     } catch (error) {
       console.error("Phone login error:", error);
     } finally {
@@ -129,9 +130,9 @@ const LoginForm = () => {
                   placeholder="8012345678"
                   value={phoneNumber}
                   onChange={(e) => {
-                    // Only allow up to 11 digits and remove non-digit characters
+                    // Only allow up to 10 digits and remove non-digit characters
                     const value = e.target.value.replace(/\D/g, '');
-                    if (value.length <= 11) {
+                    if (value.length <= 10) {
                       setPhoneNumber(value);
                     }
                   }}
@@ -139,7 +140,7 @@ const LoginForm = () => {
                   disabled={isLoading}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Format: +234 (Nigerian code) followed by your number</p>
+              <p className="text-xs text-muted-foreground">Format: Nigerian mobile number without the country code</p>
             </div>
             
             <div className="space-y-2">
@@ -150,8 +151,8 @@ const LoginForm = () => {
                   id="phone-password"
                   type="password"
                   placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={phonePassword}
+                  onChange={(e) => setPhonePassword(e.target.value)}
                   className="pl-10"
                   disabled={isLoading}
                 />

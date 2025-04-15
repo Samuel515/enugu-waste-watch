@@ -58,6 +58,7 @@ export const useAuthService = () => {
   const checkPhoneExists = async (phone: string): Promise<boolean> => {
     try {
       const formattedPhone = formatPhoneNumber(phone);
+      console.log("Checking if phone exists:", formattedPhone);
       
       const { data, error } = await supabase
         .from('profiles')
@@ -70,6 +71,7 @@ export const useAuthService = () => {
         return false;
       }
       
+      console.log("Phone exists check result:", data);
       return data && data.length > 0;
     } catch (error) {
       console.error("Error checking phone existence:", error);
@@ -179,28 +181,22 @@ export const useAuthService = () => {
     try {
       const formattedPhone = formatPhoneNumber(phone);
       
-      const phoneExists = await checkPhoneExists(formattedPhone);
-      if (phoneExists) {
-        toast({
-          title: "Account exists",
-          description: "This phone number is already registered. Redirecting to login...",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        setTimeout(() => navigate('/auth?tab=login&reason=phone-exists'), 2000);
-        return { success: false, exists: true };
-      }
+      // Store registration data in localStorage to retrieve during verification
+      const registrationData = {
+        name,
+        phoneNumber: formattedPhone,
+        password,
+        role,
+        area
+      };
       
-      const { data, error } = await supabase.auth.signInWithOtp({
+      localStorage.setItem('phoneRegistrationData', JSON.stringify(registrationData));
+      
+      // Only send OTP without creating the user
+      const { error } = await supabase.auth.signInWithOtp({
         phone: formattedPhone,
         options: {
-          shouldCreateUser: true,
-          data: {
-            name,
-            role,
-            area,
-            password,
-          }
+          shouldCreateUser: false
         }
       });
       
@@ -213,7 +209,7 @@ export const useAuthService = () => {
       console.error("Phone signup error:", error);
       toast({
         title: "Signup failed",
-        description: error.message || "Failed to create your account. Please try again.",
+        description: error.message || "Failed to send verification code. Please try again.",
         variant: "destructive",
       });
       return { success: false, error };
@@ -240,7 +236,7 @@ export const useAuthService = () => {
     try {
       console.log("Verifying phone:", phoneNumber, "with token:", token);
       
-      const { error } = await supabase.auth.verifyOtp({
+      const { data, error } = await supabase.auth.verifyOtp({
         phone: phoneNumber,
         token,
         type: 'sms'
@@ -253,6 +249,40 @@ export const useAuthService = () => {
           variant: "destructive",
         });
         throw error;
+      }
+      
+      // If verification successful and we have registration data, create the user
+      const registrationDataString = localStorage.getItem('phoneRegistrationData');
+      
+      if (registrationDataString) {
+        const regData = JSON.parse(registrationDataString);
+        
+        // User is now verified and logged in
+        if (data.session && data.user) {
+          // Update the user's metadata
+          await supabase.auth.updateUser({
+            password: regData.password,
+            data: {
+              name: regData.name,
+              role: regData.role,
+              area: regData.area,
+            }
+          });
+          
+          // Create/update profile record with phone number
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              name: regData.name,
+              role: regData.role,
+              area: regData.area,
+              phone_number: phoneNumber
+            });
+          
+          // Clear registration data
+          localStorage.removeItem('phoneRegistrationData');
+        }
       }
       
       toast({
@@ -268,12 +298,30 @@ export const useAuthService = () => {
   };
 
   const signInWithPhone = async (phoneNumber: string, password: string) => {
-    const formattedPhone = formatPhoneNumber(phoneNumber);
-    
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+      console.log("Signing in with phone:", formattedPhone);
+      
+      // First, check if this user exists
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone_number', formattedPhone);
+      
+      if (profileError || !profiles || profiles.length === 0) {
+        console.error("No user found with this phone number");
+        toast({
+          title: "Phone login failed",
+          description: "No account found with this phone number. Please register first.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Send OTP for verification first
+      const { error } = await supabase.auth.signInWithOtp({
         phone: formattedPhone,
-        password
+        options: { shouldCreateUser: false }
       });
       
       if (error) {
@@ -285,12 +333,16 @@ export const useAuthService = () => {
         throw error;
       }
 
+      // Store the password to be used after verification
+      localStorage.setItem('phoneLoginPassword', password);
+      
       toast({
-        title: "Login successful",
-        description: "Welcome back!"
+        title: "Verification code sent",
+        description: "Please enter the verification code sent to your phone."
       });
       
-      navigate('/dashboard');
+      // Navigate to verification page
+      navigate(`/auth?tab=verify&phone=${encodeURIComponent(formattedPhone)}`);
     } catch (error: any) {
       console.error("Phone login error:", error);
       throw error;

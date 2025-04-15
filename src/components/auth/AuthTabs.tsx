@@ -24,14 +24,20 @@ const AuthTabs = ({ defaultTab = "login" }: AuthTabsProps) => {
     navigate(`?${newParams.toString()}`);
   };
 
+  // Make sure the verify tab is accessible when needed
+  useEffect(() => {
+    if (tab === "verify" && !searchParams.get("phone")) {
+      // If on verify tab without phone parameter, redirect to login
+      handleTabChange("login");
+    }
+  }, [tab, searchParams]);
+
   return (
     <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className={`grid w-full ${tab === "verify" ? "grid-cols-3" : "grid-cols-2"}`}>
+      <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="login">Login</TabsTrigger>
         <TabsTrigger value="register">Register</TabsTrigger>
-        {tab === "verify" && (
-          <TabsTrigger value="verify">Verify</TabsTrigger>
-        )}
+        {/* We hide the verify tab from the tabs list but still show its content when active */}
       </TabsList>
       <TabsContent value="login" className="mt-6">
         <LoginForm />

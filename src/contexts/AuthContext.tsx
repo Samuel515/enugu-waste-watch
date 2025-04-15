@@ -15,13 +15,21 @@ export interface AppUser {
   phoneNumber?: string;
 }
 
+type SignupResult = {
+  success: boolean;
+  email?: string;
+  phone?: string;
+  exists?: boolean;
+  error?: any;
+};
+
 interface AuthContextType {
   user: AppUser | null;
   isAuthenticated: boolean;
   session: Session | null;
   login: (email: string, password: string) => Promise<void>;
-  signupWithEmail: (name: string, email: string, password: string, role: UserRole, area?: string) => Promise<void>;
-  signupWithPhone: (name: string, phone: string, password: string, role: UserRole, area?: string) => Promise<void>;
+  signupWithEmail: (name: string, email: string, password: string, role: UserRole, area?: string) => Promise<SignupResult>;
+  signupWithPhone: (name: string, phone: string, password: string, role: UserRole, area?: string) => Promise<SignupResult>;
   signInWithPhone: (phoneNumber: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;

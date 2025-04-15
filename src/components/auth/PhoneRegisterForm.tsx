@@ -26,6 +26,8 @@ const PhoneRegisterForm = () => {
   const handlePhoneBlur = async () => {
     if (phoneNumber && phoneNumber.length >= 10) {
       setCheckingPhone(true);
+      console.log("Starting phone existence check for:", phoneNumber);
+      
       try {
         // Format phone number with +234 prefix for existence check
         const exists = await checkPhoneExists(phoneNumber);
@@ -44,6 +46,8 @@ const PhoneRegisterForm = () => {
       } finally {
         setCheckingPhone(false);
       }
+    } else {
+      console.log("Phone number too short, skipping existence check");
     }
   };
 
@@ -81,8 +85,11 @@ const PhoneRegisterForm = () => {
     setIsLoading(true);
     
     try {
+      console.log("Double-checking phone number existence before registration");
       // Double-check phone number existence
       const exists = await checkPhoneExists(phoneNumber);
+      console.log("Double-check result:", exists);
+      
       if (exists) {
         setPhoneExists(true);
         toast({
@@ -152,7 +159,9 @@ const PhoneRegisterForm = () => {
               if (value.length <= 10) {
                 setPhoneNumber(value);
                 // Reset the exists flag when user types
-                setPhoneExists(false);
+                if (phoneExists) {
+                  setPhoneExists(false);
+                }
               }
             }}
             onBlur={handlePhoneBlur}

@@ -56,8 +56,7 @@ export const useAuthService = () => {
   const checkPhoneExists = async (phone: string): Promise<boolean> => {
     try {
       // Format the phone number with +234 prefix for comparison
-      const digitsOnly = phone.replace(/\D/g, '');
-      const formattedPhone = `+234${digitsOnly.slice(-10)}`;
+      const formattedPhone = formatPhoneNumber(phone);
       console.log("Checking if phone exists:", formattedPhone);
       
       const { data, error } = await supabase
@@ -180,6 +179,7 @@ export const useAuthService = () => {
     
     try {
       const formattedPhone = formatPhoneNumber(phone);
+      console.log("Starting signup with phone:", formattedPhone);
       
       // Store registration data in localStorage to retrieve during verification
       const registrationData = {
@@ -201,9 +201,11 @@ export const useAuthService = () => {
       });
       
       if (error) {
+        console.error("Error sending OTP:", error);
         throw error;
       }
       
+      console.log("OTP sent successfully to:", formattedPhone);
       return { success: true, phone: formattedPhone };
     } catch (error: any) {
       console.error("Phone signup error:", error);
@@ -275,7 +277,7 @@ export const useAuthService = () => {
               name: regData.name,
               role: regData.role,
               area: regData.area,
-              phone_number: phoneNumber
+              phone_number: formattedPhone
             });
           
           // Clear registration data

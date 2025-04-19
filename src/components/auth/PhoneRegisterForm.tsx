@@ -143,7 +143,7 @@ const PhoneRegisterForm = () => {
       
       <div className="space-y-2">
         <Label htmlFor="phone">Phone Number</Label>
-        <div className="relative flex items-center">
+        <div className={`relative flex items-center ${phoneExists ? "border-red-500 border rounded-md" : ""}`}>
           <div className="absolute inset-y-0 left-0 flex items-center justify-center w-14 border-r bg-muted text-muted-foreground rounded-l-md">
             <Phone className="h-4 w-4 mr-1" />
             <span className="text-sm">+234</span>
@@ -165,7 +165,7 @@ const PhoneRegisterForm = () => {
               }
             }}
             onBlur={handlePhoneBlur}
-            className={`pl-16 ${phoneExists ? "border-red-500" : ""}`}
+            className={`pl-16 `}
             disabled={isLoading || checkingPhone}
           />
         </div>

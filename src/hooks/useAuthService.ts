@@ -54,30 +54,26 @@ export const useAuthService = () => {
   };
 
   const checkPhoneExists = async (phone: string): Promise<boolean> => {
-    try {
-      // Format the phone number with 234 prefix for comparison
-      const digitsOnly = phone.replace(/\D/g, '');
-      const formattedPhone = `234${digitsOnly.slice(-10)}`;
-      console.log("Checking if phone exists:", formattedPhone);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, phone_number')
-        .eq('phone_number', formattedPhone)
-        .limit(1);
-      
-      if (error) {
-        console.error("Error checking phone existence:", error);
-        return false;
-      }
-      
-      console.log("Phone exists check result:", data);
-      return data && data.length > 0;
-    } catch (error) {
+  try {
+    const digitsOnly = phone.replace(/\D/g, '');
+    const formattedPhone = `234${digitsOnly.slice(-10)}`;
+    console.log("Checking if phone exists:", formattedPhone);
+
+    const { data, error } = await supabase
+      .rpc('check_phone_number', { phone_input: formattedPhone });
+
+    if (error) {
       console.error("Error checking phone existence:", error);
       return false;
     }
-  };
+
+    console.log("Phone exists check result:", data);
+    return data === true;
+  } catch (error) {
+    console.error("Error checking phone existence:", error);
+    return false;
+  }
+};
 
   const login = async (email: string, password: string) => {
     try {

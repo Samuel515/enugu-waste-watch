@@ -125,12 +125,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_phone_exists: {
+        Args: { p_phone: string }
+        Returns: boolean
+      }
       check_phone_number: {
-        Args: {
-          phone_input: string;
-        };
-        Returns: boolean;
-      };
+        Args: { phone_input: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

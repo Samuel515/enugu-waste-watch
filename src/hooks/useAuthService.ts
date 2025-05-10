@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,26 +55,27 @@ export const useAuthService = () => {
   };
 
   const checkPhoneExists = async (phone: string): Promise<boolean> => {
-  try {
-    const digitsOnly = phone.replace(/\D/g, '');
-    const formattedPhone = `234${digitsOnly.slice(-10)}`;
-    console.log("Checking if phone exists:", formattedPhone);
+    try {
+      // Format the phone number properly with +234 prefix
+      const digitsOnly = phone.replace(/\D/g, '');
+      const formattedPhone = `234${digitsOnly.slice(-10)}`;
+      console.log("Checking if phone exists:", formattedPhone);
 
-    const { data, error } = await supabase
-      .rpc('check_phone_number', { phone_input: formattedPhone });
+      const { data, error } = await supabase
+        .rpc('check_phone_number', { phone_input: formattedPhone });
 
-    if (error) {
+      if (error) {
+        console.error("Error checking phone existence:", error);
+        return false;
+      }
+
+      console.log("Phone exists check result:", data);
+      return data === true;
+    } catch (error) {
       console.error("Error checking phone existence:", error);
       return false;
     }
-
-    console.log("Phone exists check result:", data);
-    return data === true;
-  } catch (error) {
-    console.error("Error checking phone existence:", error);
-    return false;
-  }
-};
+  };
 
   const login = async (email: string, password: string) => {
     try {
@@ -176,6 +178,22 @@ export const useAuthService = () => {
     
     try {
       const formattedPhone = formatPhoneNumber(phone);
+      console.log("Attempting signup with formatted phone:", formattedPhone);
+      
+      // Check if phone number exists before proceeding
+      const phoneExists = await checkPhoneExists(phone);
+      console.log("Phone exists check before signup:", phoneExists);
+      
+      if (phoneExists) {
+        toast({
+          title: "Phone number already registered",
+          description: "This phone number is already registered. Redirecting to login...",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        setTimeout(() => navigate('/auth?tab=login&reason=phone-exists'), 2000);
+        return { success: false };
+      }
       
       // Store registration data in localStorage to retrieve during verification
       const registrationData = {
@@ -221,7 +239,7 @@ export const useAuthService = () => {
     // Extract the last 10 digits
     const lastTenDigits = digitsOnly.slice(-10);
     
-    // Always return with +234 prefix
+    // Always return with 234 prefix (without plus sign as per DB format)
     return `234${lastTenDigits}`;
   };
 
@@ -253,6 +271,8 @@ export const useAuthService = () => {
         
         // User is now verified and logged in
         if (data.session && data.user) {
+          console.log("Verification successful, updating user profile");
+          
           // Update the user's metadata
           await supabase.auth.updateUser({
             password: regData.password,
@@ -271,7 +291,7 @@ export const useAuthService = () => {
               name: regData.name,
               role: regData.role,
               area: regData.area,
-              phone_number: phoneNumber
+              phone_number: formattedPhone
             });
           
           // Clear registration data
@@ -298,15 +318,13 @@ export const useAuthService = () => {
       console.log("Signing in with phone:", formattedPhone);
       
       // Check if user exists with exact phone number match
-      const { data: phoneExists, error: rpcError } = await supabase.rpc("check_phone_exists", {
-        p_phone: formattedPhone,
-      });
+      const phoneExists = await checkPhoneExists(phoneNumber);
+      console.log("Phone exists check for login:", phoneExists);
       
-      if (rpcError || !phoneExists) {
+      if (!phoneExists) {
         toast({
           title: "Phone login failed",
-          description:
-            "No account found with this phone number. Please register first.",
+          description: "No account found with this phone number. Please register first.",
           variant: "destructive",
         });
         return;

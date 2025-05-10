@@ -92,9 +92,18 @@ const PhoneVerification = () => {
       
       const { supabase } = await import("@/integrations/supabase/client");
       
+      // Format phone number properly
+      const formatPhoneNumber = (phone: string): string => {
+        const digitsOnly = phone.replace(/\D/g, '');
+        const lastTenDigits = digitsOnly.slice(-10);
+        return `234${lastTenDigits}`;
+      };
+      
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+      
       // Resend OTP
       await supabase.auth.signInWithOtp({
-        phone: phoneNumber,
+        phone: formattedPhone,
         options: {
           shouldCreateUser: false
         }

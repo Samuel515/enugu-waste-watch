@@ -54,29 +54,6 @@ export const useAuthService = () => {
     }
   };
 
-  const checkPhoneExists = async (phone: string): Promise<boolean> => {
-    try {
-      // Format the phone number properly with +234 prefix
-      const digitsOnly = phone.replace(/\D/g, '');
-      const formattedPhone = `234${digitsOnly.slice(-10)}`;
-      console.log("Checking if phone exists:", formattedPhone);
-
-      const { data, error } = await supabase
-        .rpc('check_phone_number', { phone_input: formattedPhone });
-
-      if (error) {
-        console.error("Error checking phone existence:", error);
-        return false;
-      }
-
-      console.log("Phone exists check result:", data);
-      return data === true;
-    } catch (error) {
-      console.error("Error checking phone existence:", error);
-      return false;
-    }
-  };
-
   const login = async (email: string, password: string) => {
     try {
       const { error, data } = await supabase.auth.signInWithPassword({
@@ -173,194 +150,6 @@ export const useAuthService = () => {
     }
   };
 
-  const signupWithPhone = async (name: string, phone: string, password: string, role: UserRole, area?: string) => {
-    setIsLoading(true);
-    
-    try {
-      const formattedPhone = formatPhoneNumber(phone);
-      console.log("Attempting signup with formatted phone:", formattedPhone);
-      
-      // Check if phone number exists before proceeding
-      const phoneExists = await checkPhoneExists(phone);
-      console.log("Phone exists check before signup:", phoneExists);
-      
-      if (phoneExists) {
-        toast({
-          title: "Phone number already registered",
-          description: "This phone number is already registered. Redirecting to login...",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        setTimeout(() => navigate('/auth?tab=login&reason=phone-exists'), 2000);
-        return { success: false };
-      }
-      
-      // Store registration data in localStorage to retrieve during verification
-      const registrationData = {
-        name,
-        phoneNumber: formattedPhone,
-        password,
-        role,
-        area
-      };
-      
-      localStorage.setItem('phoneRegistrationData', JSON.stringify(registrationData));
-      
-      // Only send OTP without creating the user
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
-        options: {
-          // shouldCreateUser: false
-        }
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      return { success: true, phone: formattedPhone };
-    } catch (error: any) {
-      console.error("Phone signup error:", error);
-      toast({
-        title: "Signup failed",
-        description: error.message || "Failed to send verification code. Please try again.",
-        variant: "destructive",
-      });
-      return { success: false, error };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const formatPhoneNumber = (phoneNumber: string): string => {
-    // Remove all non-digit characters
-    const digitsOnly = phoneNumber.replace(/\D/g, '');
-    
-    // Extract the last 10 digits
-    const lastTenDigits = digitsOnly.slice(-10);
-    
-    // Always return with 234 prefix (without plus sign as per DB format)
-    return `234${lastTenDigits}`;
-  };
-
-  const verifyPhone = async (phoneNumber: string, token: string) => {
-    try {
-      const formattedPhone = formatPhoneNumber(phoneNumber);
-      console.log("Verifying phone:", formattedPhone, "with token:", token);
-      
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: formattedPhone,
-        token,
-        type: 'sms'
-      });
-      
-      if (error) {
-        toast({
-          title: "Verification failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        throw error;
-      }
-      
-      // If verification successful and we have registration data, create the user
-      const registrationDataString = localStorage.getItem('phoneRegistrationData');
-      
-      if (registrationDataString) {
-        const regData = JSON.parse(registrationDataString);
-        
-        // User is now verified and logged in
-        if (data.session && data.user) {
-          console.log("Verification successful, updating user profile");
-          
-          // Update the user's metadata
-          await supabase.auth.updateUser({
-            password: regData.password,
-            data: {
-              name: regData.name,
-              role: regData.role,
-              area: regData.area,
-            }
-          });
-          
-          // Create/update profile record with phone number
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: data.user.id,
-              name: regData.name,
-              role: regData.role,
-              area: regData.area,
-              phone_number: formattedPhone
-            });
-          
-          // Clear registration data
-          localStorage.removeItem('phoneRegistrationData');
-        }
-      }
-      
-      toast({
-        title: "Verification successful",
-        description: "Your phone number has been verified. You are now logged in."
-      });
-      
-      navigate('/dashboard');
-    } catch (error: any) {
-      console.error("Verification error:", error);
-      throw error;
-    }
-  };
-
-  const signInWithPhone = async (phoneNumber: string, password: string) => {
-    try {
-      // Format the phone number with +234 prefix
-      const formattedPhone = formatPhoneNumber(phoneNumber);
-      console.log("Signing in with phone:", formattedPhone);
-      
-      // Check if user exists with exact phone number match
-      const phoneExists = await checkPhoneExists(phoneNumber);
-      console.log("Phone exists check for login:", phoneExists);
-      
-      if (!phoneExists) {
-        toast({
-          title: "Phone login failed",
-          description: "No account found with this phone number. Please register first.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Send OTP for verification
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
-        options: { shouldCreateUser: false }
-      });
-      
-      if (error) {
-        toast({
-          title: "Phone login failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        throw error;
-      }
-
-      // Store the password to be used after verification
-      localStorage.setItem('phoneLoginPassword', password);
-      
-      toast({
-        title: "Verification code sent",
-        description: "Please enter the verification code sent to your phone."
-      });
-      
-      // Navigate to verification page
-      navigate(`/auth?tab=verify&phone=${encodeURIComponent(formattedPhone)}`);
-    } catch (error: any) {
-      console.error("Phone login error:", error);
-      throw error;
-    }
-  };
-
   const signInWithGoogle = async () => {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -450,15 +239,10 @@ export const useAuthService = () => {
     setIsLoading,
     fetchUserProfile,
     checkEmailExists,
-    checkPhoneExists,
     login,
     signupWithEmail,
-    signupWithPhone,
-    verifyPhone,
-    signInWithPhone,
     signInWithGoogle,
     signInWithApple,
-    logout,
-    formatPhoneNumber
+    logout
   };
 };

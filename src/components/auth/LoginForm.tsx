@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Lock, Phone, AlignRight } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 const LoginForm = () => {
@@ -16,10 +15,8 @@ const LoginForm = () => {
 
   const [email, setEmail] = useState(emailFromURL || "");
   const [password, setPassword] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [phonePassword, setPhonePassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login, signInWithPhone, signInWithGoogle, signInWithApple } = useAuth();
+  const { login, signInWithGoogle, signInWithApple } = useAuth();
   const { toast } = useToast();
 
   const handleEmailLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -45,126 +42,45 @@ const LoginForm = () => {
     }
   };
 
-  const handlePhoneLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    if (!phoneNumber || !phonePassword) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      await signInWithPhone(phoneNumber, phonePassword);
-    } catch (error) {
-      console.error("Phone login error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="email" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="email">Email</TabsTrigger>
-          <TabsTrigger value="phone">Phone</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="email" className="mt-4">
-          <form onSubmit={handleEmailLogin} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-            
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
-        </TabsContent>
-
-        <TabsContent value="phone" className="mt-4">
-          <form onSubmit={handlePhoneLogin} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <div className="relative flex items-center">
-                <div className="absolute inset-y-0 left-0 flex items-center justify-center w-14 border-r bg-muted text-muted-foreground rounded-l-md">
-                  +234
-                </div>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="8012345678"
-                  value={phoneNumber}
-                  onChange={(e) => {
-                    // Only allow up to 10 digits and remove non-digit characters
-                    const value = e.target.value.replace(/\D/g, '');
-                    if (value.length <= 10) {
-                      setPhoneNumber(value);
-                    }
-                  }}
-                  className="pl-16"
-                  disabled={isLoading}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">Format: Nigerian mobile number without the country code</p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="phone-password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="phone-password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={phonePassword}
-                  onChange={(e) => setPhonePassword(e.target.value)}
-                  className="pl-10"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-            
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In with Phone"}
-            </Button>
-          </form>
-        </TabsContent>
-      </Tabs>
+      <form onSubmit={handleEmailLogin} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-10"
+              disabled={isLoading}
+            />
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-10"
+              disabled={isLoading}
+            />
+          </div>
+        </div>
+        
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? "Signing in..." : "Sign In"}
+        </Button>
+      </form>
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">

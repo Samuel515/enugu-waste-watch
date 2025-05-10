@@ -1,5 +1,4 @@
 
-import { useToast } from "@/hooks/use-toast"
 import { Toaster as SonnerToaster } from 'sonner'
 import "../ui/toast.css"
 

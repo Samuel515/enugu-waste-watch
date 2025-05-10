@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Mail, MapPin, Phone } from "lucide-react";
+import { User, Mail, MapPin } from "lucide-react";
 
 const Profile = () => {
   const { user, isAuthenticated } = useAuth();
@@ -17,7 +17,6 @@ const Profile = () => {
   
   const [name, setName] = useState(user?.name || "");
   const [area, setArea] = useState(user?.area || "");
-  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber?.replace('+234', '') || "");
   const [isLoading, setIsLoading] = useState(false);
   
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -28,17 +27,11 @@ const Profile = () => {
     setIsLoading(true);
     
     try {
-      // Format phone number if provided
-      const formattedPhone = phoneNumber ? 
-        (phoneNumber.startsWith('0') ? '+234' + phoneNumber.substring(1) : '+234' + phoneNumber) : 
-        user.phoneNumber;
-      
       const { error } = await supabase
         .from('profiles')
         .update({
           name,
-          area: area || null,
-          phone_number: formattedPhone
+          area: area || null
         })
         .eq('id', user.id);
         
@@ -66,9 +59,6 @@ const Profile = () => {
   if (!isAuthenticated || !user) {
     return null;
   }
-
-  // Display phone number without the +234 prefix
-  const displayPhoneNumber = user.phoneNumber?.replace('+234', '') || "";
 
   return (
     <Layout requireAuth>
@@ -121,34 +111,6 @@ const Profile = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <div className="relative flex items-center">
-                  <div className="absolute inset-y-0 left-0 flex items-center justify-center w-14 border-r bg-muted text-muted-foreground rounded-l-md">
-                    <Phone className="h-4 w-4 mr-1" />
-                    <span className="text-sm">+234</span>
-                  </div>
-                  <Input 
-                    id="phone"
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => {
-                      // Only allow up to 10 digits and remove non-digit characters
-                      const value = e.target.value.replace(/\D/g, '');
-                      if (value.length <= 10) {
-                        setPhoneNumber(value);
-                      }
-                    }}
-                    className="pl-16"
-                    placeholder="8012345678"
-                    disabled={isLoading}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Format: Nigerian mobile number without the country code
-                </p>
-              </div>
-              
-              <div className="space-y-2">
                 <Label>User Type</Label>
                 <Select
                   value={user.role}
@@ -194,7 +156,6 @@ const Profile = () => {
                 onClick={() => {
                   setName(user.name || "");
                   setArea(user.area || "");
-                  setPhoneNumber(user.phoneNumber?.replace('+234', '') || "");
                 }}
                 disabled={isLoading}
               >

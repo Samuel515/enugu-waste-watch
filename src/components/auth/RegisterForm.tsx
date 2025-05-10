@@ -1,8 +1,6 @@
 
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EmailRegisterForm from "./EmailRegisterForm";
-import PhoneRegisterForm from "./PhoneRegisterForm";
 import SocialLoginButtons from "./SocialLoginButtons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Mail } from "lucide-react";
@@ -16,23 +14,10 @@ const RegisterForm = () => {
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="email" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="email">Email</TabsTrigger>
-          <TabsTrigger value="phone">Phone</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="email" className="mt-4">
-          <EmailRegisterForm 
-            setShowSuccessDialog={setShowSuccessDialog}
-            setRegisteredEmail={setRegisteredEmail}
-          />
-        </TabsContent>
-
-        <TabsContent value="phone" className="mt-4">
-          <PhoneRegisterForm />
-        </TabsContent>
-      </Tabs>
+      <EmailRegisterForm 
+        setShowSuccessDialog={setShowSuccessDialog}
+        setRegisteredEmail={setRegisteredEmail}
+      />
 
       <SocialLoginButtons />
 

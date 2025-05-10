@@ -131,6 +131,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      check_phone_exists: {
+        Args: {
+          p_phone: string;
+        };
+        Returns: boolean;
+      };
     }
     Enums: {
       [_ in never]: never

@@ -192,7 +192,7 @@ export const useAuthService = () => {
       const { error } = await supabase.auth.signInWithOtp({
         phone: formattedPhone,
         options: {
-          shouldCreateUser: false
+          // shouldCreateUser: false
         }
       });
       
@@ -222,7 +222,7 @@ export const useAuthService = () => {
     const lastTenDigits = digitsOnly.slice(-10);
     
     // Always return with +234 prefix
-    return `+234${lastTenDigits}`;
+    return `234${lastTenDigits}`;
   };
 
   const verifyPhone = async (phoneNumber: string, token: string) => {
@@ -298,22 +298,19 @@ export const useAuthService = () => {
       console.log("Signing in with phone:", formattedPhone);
       
       // Check if user exists with exact phone number match
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, phone_number')
-        .eq('phone_number', formattedPhone);
+      const { data: phoneExists, error: rpcError } = await supabase.rpc("check_phone_exists", {
+        p_phone: formattedPhone,
+      });
       
-      if (profileError || !profiles || profiles.length === 0) {
-        console.error("No user found with this phone number");
+      if (rpcError || !phoneExists) {
         toast({
           title: "Phone login failed",
-          description: "No account found with this phone number. Please register first.",
+          description:
+            "No account found with this phone number. Please register first.",
           variant: "destructive",
         });
         return;
       }
-      
-      console.log("Found matching profiles:", profiles);
       
       // Send OTP for verification
       const { error } = await supabase.auth.signInWithOtp({

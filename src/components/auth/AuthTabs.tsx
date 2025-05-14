@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LoginForm from "@/components/auth/LoginForm";
 import RegisterForm from "@/components/auth/RegisterForm";
-import PhoneVerification from "@/components/auth/PhoneVerification";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 interface AuthTabsProps {
@@ -24,29 +23,24 @@ const AuthTabs = ({ defaultTab = "login" }: AuthTabsProps) => {
     navigate(`?${newParams.toString()}`);
   };
 
-  // Make sure the verify tab is accessible when needed
+  // Redirect users if they try to access the verify tab
   useEffect(() => {
-    if (tab === "verify" && !searchParams.get("phone")) {
-      // If on verify tab without phone parameter, redirect to login
+    if (tab === "verify") {
       handleTabChange("login");
     }
-  }, [tab, searchParams]);
+  }, [tab]);
 
   return (
     <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="login">Login</TabsTrigger>
         <TabsTrigger value="register">Register</TabsTrigger>
-        {/* We hide the verify tab from the tabs list but still show its content when active */}
       </TabsList>
       <TabsContent value="login" className="mt-6">
         <LoginForm />
       </TabsContent>
       <TabsContent value="register" className="mt-6">
         <RegisterForm />
-      </TabsContent>
-      <TabsContent value="verify" className="mt-6">
-        <PhoneVerification />
       </TabsContent>
     </Tabs>
   );

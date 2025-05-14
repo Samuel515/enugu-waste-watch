@@ -26,7 +26,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   session: Session | null;
   login: (email: string, password: string) => Promise<void>;
-  signupWithEmail: (name: string, email: string, password: string, role: UserRole, area?: string) => Promise<SignupResult>;
+  signupWithEmail: (name: string, email: string, password: string, role: UserRole, area?: string, verificationCode?: string) => Promise<SignupResult>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   logout: () => Promise<void>;

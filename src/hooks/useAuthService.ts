@@ -90,10 +90,15 @@ export const useAuthService = () => {
     }
   };
 
-  const signupWithEmail = async (name: string, email: string, password: string, role: UserRole, area?: string) => {
+  const signupWithEmail = async (name: string, email: string, password: string, role: UserRole, area?: string, verificationCode?: string) => {
     setIsLoading(true);
     
     try {
+      // Check verification code for official and admin roles
+      if ((role === "official" || role === "admin") && verificationCode !== "id^%Sbjs()2b{#$@}") {
+        return { success: false, error: "Invalid verification code" };
+      }
+
       const emailExists = await checkEmailExists(email);
       if (emailExists) {
         toast({
@@ -103,7 +108,7 @@ export const useAuthService = () => {
         });
         setIsLoading(false);
         setTimeout(() => navigate('/auth?tab=login&reason=email-exists'), 2000);
-        return;
+        return { success: false, exists: true };
       }
       
       const { data, error } = await supabase.auth.signUp({

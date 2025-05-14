@@ -10,7 +10,7 @@ const PhoneVerification = () => {
   useEffect(() => {
     // Redirect users as phone verification is no longer available
     toast({
-      title: "Phone verification removed",
+      title: "Phone authentication removed",
       description: "Phone authentication has been removed from the application.",
       variant: "destructive",
     });

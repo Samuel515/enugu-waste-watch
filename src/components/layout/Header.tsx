@@ -113,7 +113,7 @@ const Header = () => {
                   <div className="flex flex-col space-y-1 p-2">
                     <p className="text-sm font-medium leading-none">{user.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user.email || user.phoneNumber}
+                      {user.email}
                     </p>
                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary mt-1">
                       {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
@@ -153,7 +153,7 @@ const Header = () => {
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">{user.name}</p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {user.email || user.phoneNumber}
+                        {user.email}
                       </p>
                       <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary mt-1 w-fit">
                         {user.role.charAt(0).toUpperCase() + user.role.slice(1)}

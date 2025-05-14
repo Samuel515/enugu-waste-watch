@@ -95,7 +95,7 @@ const Index = () => {
               <div className="relative">
                 <div className="absolute -top-6 -left-6 w-32 h-32 bg-waste-green/20 rounded-full blur-2xl z-0"></div>
                 <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-waste-yellow/20 rounded-full blur-2xl z-0"></div>
-                <div className="bg-white p-3 rounded-xl shadow-xl z-10 relative">
+                <div className="bg-white p-1 rounded-xl shadow-xl z-10 relative">
                   <img 
                     src="https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80" 
                     alt="Waste management" 

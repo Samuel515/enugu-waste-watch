@@ -9,7 +9,7 @@ import { User, Mail, Lock } from "lucide-react";
 import { RoleAndAreaSelector } from "./RoleAndAreaSelector";
 
 // Verification code for officials and admins
-const VERIFICATION_CODE = "id^%Sbjs()2b{#$@";
+const VERIFICATION_CODE = "id^%Sbjs()2b{#$@}";
 
 interface EmailRegisterFormProps {
   setShowSuccessDialog: (show: boolean) => void;
@@ -123,7 +123,7 @@ const EmailRegisterForm = ({ setShowSuccessDialog, setRegisteredEmail }: EmailRe
         return;
       }
       
-      const result = await signupWithEmail(name, email, password, role, role === "resident" ? area : undefined);
+      const result = await signupWithEmail(name, email, password, role, role === "resident" ? area : undefined, verificationCode);
       
       if (result && result.success) {
         setRegisteredEmail(email);

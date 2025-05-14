@@ -12,13 +12,11 @@ export interface AppUser {
   email: string;
   role: UserRole;
   area?: string;
-  phoneNumber?: string;
 }
 
 type SignupResult = {
   success: boolean;
   email?: string;
-  phone?: string;
   exists?: boolean;
   error?: any;
 };
@@ -29,14 +27,10 @@ interface AuthContextType {
   session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   signupWithEmail: (name: string, email: string, password: string, role: UserRole, area?: string) => Promise<SignupResult>;
-  signupWithPhone: (name: string, phone: string, password: string, role: UserRole, area?: string) => Promise<SignupResult>;
-  signInWithPhone: (phoneNumber: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
-  verifyPhone: (phoneNumber: string, token: string) => Promise<void>;
   logout: () => Promise<void>;
   checkEmailExists: (email: string) => Promise<boolean>;
-  checkPhoneExists: (phone: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -85,8 +79,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         name: profile.name || '',
         email: profile.email || userEmail,
         role: profile.role as UserRole,
-        area: profile.area,
-        phoneNumber: profile.phone_number
+        area: profile.area
       });
 
       auth.setUser(auth.session?.user || null);
@@ -99,14 +92,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isAuthenticated: !!appUser,
     login: auth.login,
     signupWithEmail: auth.signupWithEmail,
-    signupWithPhone: auth.signupWithPhone,
-    signInWithPhone: auth.signInWithPhone,
     signInWithGoogle: auth.signInWithGoogle,
     signInWithApple: auth.signInWithApple,
-    verifyPhone: auth.verifyPhone,
     logout: auth.logout,
-    checkEmailExists: auth.checkEmailExists,
-    checkPhoneExists: auth.checkPhoneExists
+    checkEmailExists: auth.checkEmailExists
   };
 
   return (

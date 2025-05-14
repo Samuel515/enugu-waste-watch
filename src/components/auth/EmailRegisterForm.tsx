@@ -1,12 +1,15 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Lock } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { RoleAndAreaSelector } from "./RoleAndAreaSelector";
+
+// Verification code for officials and admins
+const VERIFICATION_CODE = "id^%Sbjs()2b{#$@";
 
 interface EmailRegisterFormProps {
   setShowSuccessDialog: (show: boolean) => void;
@@ -23,17 +26,29 @@ const EmailRegisterForm = ({ setShowSuccessDialog, setRegisteredEmail }: EmailRe
   const [isLoading, setIsLoading] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [emailExists, setEmailExists] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationValid, setVerificationValid] = useState(true);
   
   const { signupWithEmail, checkEmailExists } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
+
+  // Validate verification code when it changes or when role changes
+  useEffect(() => {
+    if (role === "official" || role === "admin") {
+      setVerificationValid(verificationCode === VERIFICATION_CODE || verificationCode === "");
+    } else {
+      setVerificationValid(true);
+    }
+  }, [verificationCode, role]);
 
   const handleEmailBlur = async () => {
-    if (email && email.includes('@')) {
+    if (email && email.includes("@")) {
       setCheckingEmail(true);
+      
       try {
         const exists = await checkEmailExists(email);
         setEmailExists(exists);
+        
         if (exists) {
           toast({
             title: "Email already registered",
@@ -49,7 +64,7 @@ const EmailRegisterForm = ({ setShowSuccessDialog, setRegisteredEmail }: EmailRe
     }
   };
 
-  const handleEmailSignup = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     // Validation
@@ -80,46 +95,63 @@ const EmailRegisterForm = ({ setShowSuccessDialog, setRegisteredEmail }: EmailRe
       return;
     }
 
-    if (emailExists) {
+    // Check verification code for officials and admins
+    if ((role === "official" || role === "admin") && verificationCode !== VERIFICATION_CODE) {
       toast({
-        title: "Email already registered",
-        description: "Please use a different email or sign in with your existing account.",
+        title: "Error",
+        description: "Invalid verification code",
         variant: "destructive",
       });
+      setVerificationValid(false);
       return;
     }
     
     setIsLoading(true);
     
     try {
-      // One final check for email existence
+      // Double-check email existence
       const exists = await checkEmailExists(email);
+      
       if (exists) {
+        setEmailExists(true);
         toast({
           title: "Email already registered",
-          description: "This email is already registered. Redirecting to login...",
+          description: "This email is already registered. Please use a different email or sign in.",
           variant: "destructive",
         });
         setIsLoading(false);
-        setTimeout(() => {
-          navigate('/auth?tab=login&reason=email-exists');
-        }, 2000);
         return;
       }
       
-      await signupWithEmail(name, email, password, role, role === "resident" ? area : undefined);
-      // Store the email and show success dialog
-      setRegisteredEmail(email);
-      setShowSuccessDialog(true);
+      const result = await signupWithEmail(name, email, password, role, role === "resident" ? area : undefined);
+      
+      if (result && result.success) {
+        setRegisteredEmail(email);
+        setShowSuccessDialog(true);
+        
+        // Reset form
+        setName("");
+        setEmail("");
+        setPassword("");
+        setConfirmPassword("");
+        setRole("resident");
+        setArea("");
+        setVerificationCode("");
+      }
     } catch (error) {
       console.error("Registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: "There was an error during registration. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleEmailSignup} className="space-y-4">
+    <form onSubmit={handleSignup} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">Full Name</Label>
         <div className="relative">
@@ -138,19 +170,22 @@ const EmailRegisterForm = ({ setShowSuccessDialog, setRegisteredEmail }: EmailRe
       
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <div className="relative">
+        <div className={`relative flex items-center ${emailExists ? "border-red-500 border rounded-md" : ""}`}>
           <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
           <Input
             id="email"
             type="email"
-            placeholder="Enter your email"
+            placeholder="Enter your email address"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
-              setEmailExists(false);
+              // Reset the exists flag when user types
+              if (emailExists) {
+                setEmailExists(false);
+              }
             }}
             onBlur={handleEmailBlur}
-            className={`pl-10 ${emailExists ? "border-red-500" : ""}`}
+            className={`pl-10`}
             disabled={isLoading || checkingEmail}
           />
         </div>
@@ -201,14 +236,17 @@ const EmailRegisterForm = ({ setShowSuccessDialog, setRegisteredEmail }: EmailRe
         area={area}
         setArea={setArea}
         isLoading={isLoading}
+        verificationCode={verificationCode}
+        setVerificationCode={setVerificationCode}
+        verificationValid={verificationValid}
       />
       
       <Button 
         type="submit" 
         className="w-full" 
-        disabled={isLoading || checkingEmail || emailExists}
+        disabled={isLoading || checkingEmail || emailExists || ((role === "official" || role === "admin") && !verificationValid)}
       >
-        {isLoading ? "Creating account..." : checkingEmail ? "Checking email..." : "Sign Up"}
+        {isLoading ? "Creating account..." : checkingEmail ? "Checking email..." : "Sign Up with Email"}
       </Button>
     </form>
   );

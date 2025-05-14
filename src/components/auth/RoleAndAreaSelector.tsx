@@ -3,7 +3,8 @@ import { UserRole } from "@/contexts/AuthContext";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { MapPin } from "lucide-react";
+import { MapPin, ShieldCheck } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface RoleAndAreaSelectorProps {
   role: UserRole;
@@ -11,6 +12,9 @@ interface RoleAndAreaSelectorProps {
   area: string;
   setArea: (area: string) => void;
   isLoading: boolean;
+  verificationCode: string;
+  setVerificationCode: (code: string) => void;
+  verificationValid: boolean;
 }
 
 export const RoleAndAreaSelector = ({
@@ -18,8 +22,18 @@ export const RoleAndAreaSelector = ({
   setRole,
   area,
   setArea,
-  isLoading
+  isLoading,
+  verificationCode,
+  setVerificationCode,
+  verificationValid
 }: RoleAndAreaSelectorProps) => {
+  const [showVerification, setShowVerification] = useState(false);
+  
+  // Update showVerification whenever role changes
+  useEffect(() => {
+    setShowVerification(role === "official" || role === "admin");
+  }, [role]);
+
   return (
     <>
       <div className="space-y-2">
@@ -39,6 +53,30 @@ export const RoleAndAreaSelector = ({
           </SelectContent>
         </Select>
       </div>
+      
+      {showVerification && (
+        <div className="space-y-2">
+          <Label htmlFor="verificationCode" className="flex items-center">
+            Verification Code 
+            <span className="text-xs text-muted-foreground ml-2">(Required for Officials & Admins)</span>
+          </Label>
+          <div className="relative">
+            <ShieldCheck className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            <Input
+              id="verificationCode"
+              type="password"
+              placeholder="Enter verification code"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              className={`pl-10 ${!verificationValid && verificationCode ? 'border-red-500' : ''}`}
+              disabled={isLoading}
+            />
+          </div>
+          {!verificationValid && verificationCode && (
+            <p className="text-sm text-red-500">Invalid verification code</p>
+          )}
+        </div>
+      )}
       
       {role === "resident" && (
         <div className="space-y-2">

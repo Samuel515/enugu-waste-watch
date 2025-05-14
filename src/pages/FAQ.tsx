@@ -44,7 +44,7 @@ const FAQPage = () => {
     },
     {
       question: "What types of waste issues can I report?",
-      answer: "You can report various issues such as illegal dumping, missed collections, overflowing public bins, and littering. The more details and photos you provide, the better officials can respond."
+      answer: "You can report various issues such as illegal dumping, missed collections, and overflowing public bins. The more details and photos you provide, the better officials can respond."
     },
     {
       question: "How long will it take for officials to address my reported issue?",

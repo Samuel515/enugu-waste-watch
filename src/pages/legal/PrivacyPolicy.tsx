@@ -19,7 +19,7 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-4">Overview</h2>
               <p className="mb-4">
-                Enugu Waste Watch ("we", "our", or "us") is committed to protecting your privacy.
+                Enugu Waste Watch is committed to protecting your privacy.
                 This Privacy Policy explains how we collect, use, disclose, and safeguard your information
                 when you use our mobile application and website (collectively, the "Service").
               </p>

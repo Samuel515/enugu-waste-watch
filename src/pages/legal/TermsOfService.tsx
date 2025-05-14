@@ -21,7 +21,7 @@ const TermsOfService = () => {
               <h2 className="text-2xl font-semibold mb-4">1. Agreement to Terms</h2>
               <p className="mb-4">
                 These Terms of Service ("Terms") constitute a legally binding agreement made between you and
-                Enugu Waste Watch ("we," "us," or "our"), governing your access to and use of our mobile
+                Enugu Waste Watch, governing your access to and use of our mobile
                 application and website (collectively, the "Service").
               </p>
               <p>

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { Search } from "lucide-react";
+import { LoaderCircle, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -121,7 +121,8 @@ const Reports = () => {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex justify-center items-center py-10">
+              <div className="flex justify-center items-center py-10 flex-col">
+                <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2"/>
                 <p className="text-muted-foreground">Loading reports...</p>
               </div>
             ) : filteredReports.length === 0 ? (
@@ -159,7 +160,7 @@ const Reports = () => {
                     </div>
                     {(user?.role === "official" || user?.role === "admin") && (
                       <Link
-                        to={`/manage-reports/${report.id}`}
+                        to={`/reports/${report.id}`}
                         className="text-xs text-primary hover:underline mt-3 sm:mt-0 whitespace-nowrap"
                       >
                         View details

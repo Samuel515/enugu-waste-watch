@@ -108,7 +108,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
                   </div>
                   {(userRole === "official" || userRole === "admin") && (
                     <Link
-                      to={`/manage-reports/${report.id}`}
+                      to={`/reports/${report.id}`}
                       className="text-xs text-primary hover:underline mt-2 sm:mt-0"
                     >
                       View details

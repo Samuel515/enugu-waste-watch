@@ -4,88 +4,69 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar as CalendarIcon, List } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { format } from "date-fns";
 
 interface CollectionEvent {
-  id: number;
+  id: string;
   date: Date;
   area: string;
   time: string;
   type: string;
+  notes?: string;
+  status: string;
 }
 
 const ScheduleCalendar = () => {
+  const { toast } = useToast();
   const [events, setEvents] = useState<CollectionEvent[]>([]);
   const [view, setView] = useState<"calendar" | "list">("calendar");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Mock data for waste collection events
+  // Fetch pickup schedules from Supabase
   useEffect(() => {
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth();
-    
-    const mockEvents: CollectionEvent[] = [
-      {
-        id: 1,
-        date: new Date(currentYear, currentMonth, 15),
-        area: "Independence Layout",
-        time: "9:00 AM - 11:00 AM",
-        type: "General Waste"
-      },
-      {
-        id: 2,
-        date: new Date(currentYear, currentMonth, 16),
-        area: "New Haven",
-        time: "1:00 PM - 3:00 PM",
-        type: "Recyclables"
-      },
-      {
-        id: 3,
-        date: new Date(currentYear, currentMonth, 17),
-        area: "Trans-Ekulu",
-        time: "10:00 AM - 12:00 PM",
-        type: "General Waste"
-      },
-      {
-        id: 4,
-        date: new Date(currentYear, currentMonth, 18),
-        area: "Ogui Road",
-        time: "8:00 AM - 10:00 AM",
-        type: "General Waste"
-      },
-      {
-        id: 5,
-        date: new Date(currentYear, currentMonth, 19),
-        area: "GRA",
-        time: "2:00 PM - 4:00 PM",
-        type: "Recyclables"
-      },
-      {
-        id: 6,
-        date: new Date(currentYear, currentMonth, 20),
-        area: "Uwani",
-        time: "9:00 AM - 11:00 AM",
-        type: "General Waste"
-      },
-      {
-        id: 7,
-        date: new Date(currentYear, currentMonth, 22),
-        area: "Abakpa",
-        time: "1:00 PM - 3:00 PM",
-        type: "General Waste"
-      },
-      {
-        id: 8,
-        date: new Date(currentYear, currentMonth, 24),
-        area: "Coal Camp",
-        time: "10:00 AM - 12:00 PM",
-        type: "Recyclables"
+    const fetchPickupSchedules = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch all scheduled pickups
+        const { data, error } = await supabase
+          .from('pickup_schedules')
+          .select('*')
+          .order('pickup_date', { ascending: true }) as any;
+        
+        if (error) throw error;
+        
+        if (data) {
+          const formattedEvents: CollectionEvent[] = data.map((item: any) => ({
+            id: item.id,
+            date: new Date(item.pickup_date),
+            area: item.area,
+            time: format(new Date(item.pickup_date), "h:mm a"),
+            type: "General Waste", // Default value as we don't have a type in the schema
+            notes: item.notes,
+            status: item.status
+          }));
+          
+          setEvents(formattedEvents);
+        }
+      } catch (error) {
+        console.error('Error fetching pickup schedules:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load pickup schedules",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
-    ];
+    };
     
-    setEvents(mockEvents);
-  }, []);
+    fetchPickupSchedules();
+  }, [toast]);
   
   const eventsForSelectedDate = events.filter(
     (event) => selectedDate && event.date.toDateString() === selectedDate.toDateString()
@@ -119,7 +100,11 @@ const ScheduleCalendar = () => {
           </div>
         </div>
         
-        {view === "calendar" && (
+        {isLoading ? (
+          <div className="flex justify-center items-center py-10">
+            <p className="text-muted-foreground">Loading schedules...</p>
+          </div>
+        ) : view === "calendar" ? (
           <div className="flex flex-col md:flex-row gap-6">
             <div className="w-full md:w-auto">
               <CalendarComponent
@@ -139,7 +124,8 @@ const ScheduleCalendar = () => {
                   eventDay: (date) => {
                     if (!date) return false;
                     return events.some(event => 
-                      event.date.toDateString() === date.toDateString()
+                      event.date.toDateString() === date.toDateString() &&
+                      event.status === 'scheduled'
                     );
                   }
                 }}
@@ -166,14 +152,28 @@ const ScheduleCalendar = () => {
                   {eventsForSelectedDate.map((event) => (
                     <div
                       key={event.id}
-                      className="border rounded-md p-3 bg-muted/30"
+                      className={`border rounded-md p-3 ${
+                        event.status === 'scheduled' ? 'bg-muted/30' : 
+                        event.status === 'completed' ? 'bg-green-50' : 'bg-red-50'
+                      }`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="font-medium">{event.area}</h4>
                           <p className="text-sm">{event.time}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {event.type}
+                          {event.notes && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Note: {event.notes}
+                            </p>
+                          )}
+                          <p className="text-xs mt-1">
+                            <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+                              event.status === 'scheduled' ? 'bg-blue-100 text-blue-800' : 
+                              event.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                            </span>
                           </p>
                         </div>
                       </div>
@@ -183,9 +183,7 @@ const ScheduleCalendar = () => {
               )}
             </div>
           </div>
-        )}
-        
-        {view === "list" && (
+        ) : (
           <div className="space-y-4">
             {sortedEvents.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
@@ -200,6 +198,9 @@ const ScheduleCalendar = () => {
                     event.date.toDateString() === selectedDate.toDateString()
                       ? "border-waste-green bg-waste-green/5"
                       : ""
+                  } ${
+                    event.status === 'completed' ? 'bg-green-50' : 
+                    event.status === 'cancelled' ? 'bg-red-50' : ''
                   }`}
                 >
                   <div className="flex justify-between items-start">
@@ -213,8 +214,19 @@ const ScheduleCalendar = () => {
                       </p>
                       <h4 className="font-medium mt-1">{event.area}</h4>
                       <p className="text-sm">{event.time}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {event.type}
+                      {event.notes && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Note: {event.notes}
+                        </p>
+                      )}
+                      <p className="text-xs mt-2">
+                        <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+                          event.status === 'scheduled' ? 'bg-blue-100 text-blue-800' : 
+                          event.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                        </span>
                       </p>
                     </div>
                   </div>

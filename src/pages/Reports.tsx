@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,78 +9,66 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/AuthContext";
 import { Search } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+
+interface Report {
+  id: string;
+  title: string;
+  location: string;
+  status: string;
+  created_at: string;
+  description: string | null;
+  user_id: string;
+  user_name: string | null;
+}
 
 const Reports = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [reports, setReports] = useState<Report[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Mock data for reports
-  const allReports = [
-    {
-      id: "WR-2023-06-12",
-      title: "Overflowing waste bin",
-      location: "Independence Layout",
-      status: "in-progress",
-      date: "2023-06-12",
-      description: "The waste bin at the junction is overflowing and needs immediate attention"
-    },
-    {
-      id: "WR-2023-06-08",
-      title: "Illegal dumping near school",
-      location: "New Haven",
-      status: "resolved",
-      date: "2023-06-08",
-      description: "People are illegally dumping waste near the primary school"
-    },
-    {
-      id: "WR-2023-05-30",
-      title: "Waste collection delayed",
-      location: "Trans-Ekulu",
-      status: "pending",
-      date: "2023-05-30",
-      description: "Regular waste collection has been delayed for over a week"
-    },
-    {
-      id: "WR-2023-05-25",
-      title: "Blocked drainage due to waste",
-      location: "Ogui Road",
-      status: "in-progress",
-      date: "2023-05-25",
-      description: "Drainage system is blocked with waste causing flooding during rain"
-    },
-    {
-      id: "WR-2023-05-18",
-      title: "Waste burning in residential area",
-      location: "GRA",
-      status: "resolved",
-      date: "2023-05-18",
-      description: "People are burning waste in the residential area causing air pollution"
-    },
-    {
-      id: "WR-2023-05-15",
-      title: "Waste container damaged",
-      location: "Abakpa",
-      status: "pending",
-      date: "2023-05-15",
-      description: "The community waste container is damaged and needs replacement"
-    },
-    {
-      id: "WR-2023-05-10",
-      title: "Industrial waste dumping",
-      location: "Emene",
-      status: "in-progress",
-      date: "2023-05-10",
-      description: "Industrial waste being dumped in unauthorized location"
-    }
-  ];
+  // Fetch reports from Supabase
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        setIsLoading(true);
+        
+        const { data, error } = await supabase
+          .from('reports')
+          .select('*')
+          .order('created_at', { ascending: false }) as any;
+        
+        if (error) throw error;
+        
+        if (data) {
+          setReports(data);
+        }
+      } catch (error) {
+        console.error('Error fetching reports:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load reports",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchReports();
+  }, [toast]);
   
   // Filter reports based on search query and status filter
-  const filteredReports = allReports.filter(report => {
+  const filteredReports = reports.filter(report => {
     const matchesSearch = 
       report.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
       report.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.id.toLowerCase().includes(searchQuery.toLowerCase());
+      (report.id && report.id.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (report.description && report.description.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesStatus = statusFilter === "all" || report.status === statusFilter;
     
@@ -132,7 +120,11 @@ const Reports = () => {
             <CardTitle>All Reports</CardTitle>
           </CardHeader>
           <CardContent>
-            {filteredReports.length === 0 ? (
+            {isLoading ? (
+              <div className="flex justify-center items-center py-10">
+                <p className="text-muted-foreground">Loading reports...</p>
+              </div>
+            ) : filteredReports.length === 0 ? (
               <div className="text-center py-10">
                 <p className="text-muted-foreground">No reports match your search criteria</p>
               </div>
@@ -155,13 +147,14 @@ const Reports = () => {
                               : "bg-amber-100 text-amber-800"
                           }`}
                         >
-                          {report.status}
+                          {report.status === 'in-progress' ? 'In Progress' : 
+                            report.status.charAt(0).toUpperCase() + report.status.slice(1)}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">{report.id}</p>
                       <p className="text-sm mt-1">{report.description}</p>
                       <div className="text-xs text-muted-foreground mt-2">
-                        {report.location} · {report.date}
+                        {report.location} · {new Date(report.created_at).toLocaleDateString()}
                       </div>
                     </div>
                     {(user?.role === "official" || user?.role === "admin") && (

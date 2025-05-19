@@ -5,83 +5,142 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NotificationList from "@/components/notifications/NotificationList";
 import { Bell } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
-// Mock data
 interface Notification {
   id: string;
   title: string;
   message: string;
-  timestamp: string;
+  created_at: string;
   read: boolean;
   type: "collection" | "report" | "system";
+  read_at: string | null;
 }
 
 const Notifications = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Simulate fetching notifications
+  // Fetch notifications from Supabase
   useEffect(() => {
-    // This would be a call to your backend in a real application
-    const mockNotifications: Notification[] = [
-      {
-        id: "1",
-        title: "Waste Collection Scheduled",
-        message: "Waste collection in Independence Layout is scheduled for tomorrow at 9:00 AM.",
-        timestamp: "2023-06-15T09:00:00",
-        read: false,
-        type: "collection"
-      },
-      {
-        id: "2",
-        title: "Report Status Updated",
-        message: "Your waste report #WR-2023-06-12 has been marked as 'In Progress'.",
-        timestamp: "2023-06-14T14:30:00",
-        read: true,
-        type: "report"
-      },
-      {
-        id: "3",
-        title: "Collection Completed",
-        message: "Waste collection in your area has been completed successfully.",
-        timestamp: "2023-06-10T11:45:00",
-        read: false,
-        type: "collection"
-      },
-      {
-        id: "4",
-        title: "System Maintenance",
-        message: "The system will undergo maintenance on June 20, 2023, from 2:00 AM to 4:00 AM.",
-        timestamp: "2023-06-08T16:20:00",
-        read: true,
-        type: "system"
-      },
-      {
-        id: "5",
-        title: "New Schedule Available",
-        message: "The waste collection schedule for July 2023 is now available.",
-        timestamp: "2023-06-05T08:15:00",
-        read: false,
-        type: "collection"
-      },
-      {
-        id: "6",
-        title: "Report Resolved",
-        message: "Your waste report #WR-2023-05-28 has been resolved. Thank you for your contribution.",
-        timestamp: "2023-06-03T13:10:00",
-        read: true,
-        type: "report"
+    const fetchNotifications = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .or(`for_user_id.eq.${user.id},for_all.eq.true`)
+          .order('created_at', { ascending: false }) as any;
+          
+        if (error) throw error;
+        
+        if (data) {
+          const formattedNotifications: Notification[] = data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            message: item.message,
+            created_at: item.created_at,
+            read: item.read,
+            type: item.type,
+            read_at: item.read_at
+          }));
+          
+          setNotifications(formattedNotifications);
+        }
+      } catch (error: any) {
+        console.error('Error fetching notifications:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load notifications",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
-    ];
+    };
     
-    setNotifications(mockNotifications);
-  }, []);
+    fetchNotifications();
+  }, [user, toast]);
   
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+  const handleMarkAllAsRead = async () => {
+    if (!user) return;
+    
+    try {
+      const unreadNotifications = notifications
+        .filter(n => !n.read && n.for_user_id === user.id)
+        .map(n => n.id);
+        
+      if (unreadNotifications.length === 0) return;
+      
+      const now = new Date().toISOString();
+      
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true, read_at: now })
+        .in('id', unreadNotifications) as any;
+        
+      if (error) throw error;
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => {
+          if (!notification.read && notification.for_user_id === user.id) {
+            return { ...notification, read: true, read_at: now };
+          }
+          return notification;
+        })
+      );
+      
+      toast({
+        title: "Success",
+        description: "All notifications marked as read"
+      });
+    } catch (error: any) {
+      console.error('Error marking all as read:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark notifications as read",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleMarkAsRead = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      const now = new Date().toISOString();
+      
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true, read_at: now })
+        .eq('id', id) as any;
+        
+      if (error) throw error;
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => {
+          if (notification.id === id) {
+            return { ...notification, read: true, read_at: now };
+          }
+          return notification;
+        })
+      );
+    } catch (error: any) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
   };
   
   const filteredNotifications = notifications
@@ -141,19 +200,49 @@ const Notifications = () => {
           </TabsList>
           
           <TabsContent value="all">
-            <NotificationList notifications={filteredNotifications} />
+            {isLoading ? (
+              <div className="text-center py-10">
+                <p className="text-muted-foreground">Loading notifications...</p>
+              </div>
+            ) : (
+              <NotificationList 
+                notifications={filteredNotifications.map(n => ({
+                  ...n,
+                  timestamp: n.created_at
+                }))} 
+                onMarkAsRead={handleMarkAsRead}
+              />
+            )}
           </TabsContent>
           
           <TabsContent value="collection">
-            <NotificationList notifications={filteredNotifications} />
+            <NotificationList 
+              notifications={filteredNotifications.map(n => ({
+                ...n,
+                timestamp: n.created_at
+              }))} 
+              onMarkAsRead={handleMarkAsRead}
+            />
           </TabsContent>
           
           <TabsContent value="report">
-            <NotificationList notifications={filteredNotifications} />
+            <NotificationList 
+              notifications={filteredNotifications.map(n => ({
+                ...n,
+                timestamp: n.created_at
+              }))} 
+              onMarkAsRead={handleMarkAsRead}
+            />
           </TabsContent>
           
           <TabsContent value="system">
-            <NotificationList notifications={filteredNotifications} />
+            <NotificationList 
+              notifications={filteredNotifications.map(n => ({
+                ...n,
+                timestamp: n.created_at
+              }))} 
+              onMarkAsRead={handleMarkAsRead}
+            />
           </TabsContent>
         </Tabs>
       </div>

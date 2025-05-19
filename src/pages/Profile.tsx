@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,14 @@ const Profile = () => {
   const [name, setName] = useState(user?.name || "");
   const [area, setArea] = useState(user?.area || "");
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Update form values when user data changes
+  useEffect(() => {
+    if (user) {
+      setName(user.name || "");
+      setArea(user.area || "");
+    }
+  }, [user]);
   
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -99,7 +107,7 @@ const Profile = () => {
                   <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input 
                     id="email"
-                    value={user.email}
+                    value={user.email || ""}
                     className="pl-10"
                     disabled
                     readOnly

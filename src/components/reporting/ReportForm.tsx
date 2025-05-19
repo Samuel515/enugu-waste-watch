@@ -16,6 +16,8 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Camera, MapPin, Upload, Trash2, AlertTriangle, CircleAlert, TriangleAlert } from "lucide-react";
 import ImageUpload from "@/components/reporting/ImageUpload";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const WASTE_TYPES = [
   {
@@ -47,6 +49,8 @@ const WASTE_TYPES = [
 const ReportForm = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState(user?.area || "");
@@ -54,23 +58,29 @@ const ReportForm = () => {
   const [images, setImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(false);
+  const [coordinates, setCoordinates] = useState<{latitude: number, longitude: number} | null>(null);
 
   const handleLocationDetection = () => {
     setIsLocationLoading(true);
     
-    // In a real app, you would use the browser's geolocation API
+    // Use the browser's geolocation API
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        // This would call a reverse geocoding API with position.coords.latitude and position.coords.longitude
-        // For demo, we'll simulate a delayed response
-        setTimeout(() => {
-          setLocation("Detected: Independence Layout, Enugu");
-          setIsLocationLoading(false);
-          toast({
-            title: "Location detected",
-            description: "Your current location has been detected successfully.",
-          });
-        }, 1500);
+        // Store the coordinates
+        setCoordinates({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+        
+        // For this demo, we'll use a formatted string of the coordinates
+        const locationStr = `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+        setLocation(`Detected: ${user?.area || locationStr}`);
+        setIsLocationLoading(false);
+        
+        toast({
+          title: "Location detected",
+          description: "Your current location has been detected successfully.",
+        });
       },
       (error) => {
         setIsLocationLoading(false);
@@ -86,6 +96,15 @@ const ReportForm = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to submit a report",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Validation
     if (!title || !description || !location || !wasteType) {
       toast({
@@ -98,10 +117,39 @@ const ReportForm = () => {
     
     setIsLoading(true);
     
-    // In a real app, you would submit this to an API
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Generate a report ID with format WR-YYYY-MM-DD-XXX
+      const date = new Date();
+      const reportId = `WR-${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      
+      // Submit the report to Supabase
+      const { data, error } = await supabase
+        .from('reports')
+        .insert({
+          title,
+          description,
+          location,
+          coordinates: coordinates ? coordinates : null,
+          status: 'pending',
+          user_id: user.id,
+          user_name: user.name,
+          user_area: user.area,
+          image_url: images.length > 0 ? images[0] : null
+        })
+        .select() as any;
+        
+      if (error) throw error;
+      
+      // Create a notification for officials/admins about this new report
+      await supabase
+        .from('notifications')
+        .insert({
+          title: 'New Waste Report Submitted',
+          message: `A new waste report "${title}" has been submitted in ${location}`,
+          type: 'report',
+          for_all: true,
+          created_by: user.id
+        }) as any;
       
       toast({
         title: "Report submitted successfully",
@@ -114,10 +162,15 @@ const ReportForm = () => {
       setLocation(user?.area || "");
       setWasteType("");
       setImages([]);
-    } catch (error) {
+      setCoordinates(null);
+      
+      // Redirect to the reports page
+      navigate('/reports');
+    } catch (error: any) {
+      console.error("Error submitting report:", error);
       toast({
         title: "Failed to submit report",
-        description: "There was an error submitting your report. Please try again.",
+        description: error.message || "There was an error submitting your report. Please try again.",
         variant: "destructive",
       });
     } finally {

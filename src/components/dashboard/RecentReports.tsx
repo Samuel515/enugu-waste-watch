@@ -1,40 +1,60 @@
 
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 interface RecentReportsProps {
   userRole: string;
 }
 
+interface Report {
+  id: string;
+  title: string;
+  location: string;
+  status: string;
+  created_at: string;
+  description: string;
+}
+
 const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
-  // Mock data for recent reports
-  const reports = [
-    {
-      id: "WR-2023-06-12",
-      title: "Overflowing waste bin",
-      location: "Independence Layout",
-      status: "in-progress",
-      date: "2023-06-12",
-      description: "Overflowing waste bin"
-    },
-    {
-      id: "WR-2023-06-08",
-      title: "Illegal dumping near school",
-      location: "New Haven",
-      status: "resolved",
-      date: "2023-06-08",
-      description: "Illegal dumping near school"
-    },
-    {
-      id: "WR-2023-05-30",
-      title: "Waste collection delayed",
-      location: "Trans-Ekulu",
-      status: "pending",
-      date: "2023-05-30",
-      description: "Waste collection delayed"
-    }
-  ];
+  const [reports, setReports] = useState<Report[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch the 3 most recent reports
+        const { data, error } = await supabase
+          .from('reports')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(3) as any;
+        
+        if (error) throw error;
+        
+        if (data) {
+          setReports(data);
+        }
+      } catch (error) {
+        console.error('Error fetching reports:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load recent reports",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchReports();
+  }, [toast]);
 
   return (
     <div className="md:col-span-2">
@@ -43,7 +63,11 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
           <CardTitle>Recent Reports</CardTitle>
         </CardHeader>
         <CardContent>
-          {reports.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center py-6">
+              <p className="text-muted-foreground">Loading reports...</p>
+            </div>
+          ) : reports.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-muted-foreground">No reports yet</p>
               <Link
@@ -77,7 +101,7 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
                     </div>
                     <p className="text-sm text-muted-foreground">{report.id}</p>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {report.location} · {report.date}
+                      {report.location} · {new Date(report.created_at).toLocaleDateString()}
                     </div>
                   </div>
                   {(userRole === "official" || userRole === "admin") && (

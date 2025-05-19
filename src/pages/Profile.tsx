@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Mail, MapPin } from "lucide-react";
+import { User, Mail, MapPin, LoaderCircle } from "lucide-react";
 
 const Profile = () => {
   const { user, isAuthenticated } = useAuth();

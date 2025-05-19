@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { LoaderCircle } from "lucide-react";
 
 interface RecentReportsProps {
   userRole: string;
@@ -64,8 +65,9 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex justify-center items-center py-6">
-              <p className="text-muted-foreground">Loading reports...</p>
+            <div className="flex justify-center items-center py-6 flex-col">
+              <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2" />
+              <p className="text-muted-foreground">Loading Reports...</p>
             </div>
           ) : reports.length === 0 ? (
             <div className="text-center py-6">

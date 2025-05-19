@@ -99,7 +99,7 @@ const PickupSchedule = () => {
         {isLoading ? (
           <div className="flex flex-col justify-center items-center py-6">
             <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2" />
-            <p className="text-muted-foreground">Loading schedules...</p>
+            <p className="text-muted-foreground">Loading Schedules...</p>
           </div>
         ) : (
           <>

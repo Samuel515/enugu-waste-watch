@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar as CalendarIcon, List } from "lucide-react";
+import { Calendar as CalendarIcon, List, LoaderCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
@@ -101,8 +101,9 @@ const ScheduleCalendar = () => {
         </div>
         
         {isLoading ? (
-          <div className="flex justify-center items-center py-10">
-            <p className="text-muted-foreground">Loading schedules...</p>
+          <div className="flex justify-center items-center py-10 flex-col">
+            <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2" />
+            <p className="text-muted-foreground">Loading Schedules...</p>
           </div>
         ) : view === "calendar" ? (
           <div className="flex flex-col md:flex-row gap-6">

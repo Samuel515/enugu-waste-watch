@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { Lock, Mail, Bell, Shield, AlertTriangle } from "lucide-react";
+import { Lock, Mail, Bell, Shield, AlertTriangle, LoaderCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -164,7 +164,12 @@ const Settings = () => {
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Updating..." : "Update Password"}
+                    {isLoading ? (
+                      <>
+                        <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : "Update Password"}
                   </Button>
                 </CardFooter>
               </form>

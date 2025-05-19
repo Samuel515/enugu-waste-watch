@@ -8,6 +8,8 @@ import { Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoaderCircle } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -17,6 +19,7 @@ interface Notification {
   read: boolean;
   type: "collection" | "report" | "system";
   read_at: string | null;
+  for_user_id?: string;
 }
 
 const Notifications = () => {
@@ -52,7 +55,8 @@ const Notifications = () => {
             created_at: item.created_at,
             read: item.read,
             type: item.type,
-            read_at: item.read_at
+            read_at: item.read_at,
+            for_user_id: item.for_user_id
           }));
           
           setNotifications(formattedNotifications);
@@ -202,7 +206,10 @@ const Notifications = () => {
           <TabsContent value="all">
             {isLoading ? (
               <div className="text-center py-10">
-                <p className="text-muted-foreground">Loading notifications...</p>
+                <div className="flex flex-col items-center justify-center">
+                  <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2" />
+                  <p className="text-muted-foreground">Loading notifications...</p>
+                </div>
               </div>
             ) : (
               <NotificationList 

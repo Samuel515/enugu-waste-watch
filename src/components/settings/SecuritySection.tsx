@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Mail, BadgeCheck } from "lucide-react";
+import { Mail, BadgeCheck, LoaderCircle } from "lucide-react";
 import { Badge as UIBadge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CustomSession {
   id: string;
@@ -59,13 +61,17 @@ export default function SecuritySection() {
   }, [user]);
   
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric'
-    });
+    try {
+      return new Date(dateString).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric'
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
   const truncateUserAgent = (userAgent: string) => {
@@ -148,9 +154,17 @@ export default function SecuritySection() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading your sessions...</p>
+            <div className="space-y-3">
+              <div className="flex flex-col items-center justify-center py-4">
+                <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2" />
+                <p className="text-sm text-muted-foreground">Loading your sessions...</p>
+              </div>
+              <Skeleton className="h-16 w-full rounded-md" />
+            </div>
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No active sessions found</p>
+            <div className="py-6 text-center">
+              <p className="text-sm text-muted-foreground">No active sessions found</p>
+            </div>
           ) : (
             <div className="space-y-4">
               {sessions.map((session) => (
@@ -160,7 +174,7 @@ export default function SecuritySection() {
                       <span className="font-medium">{getDeviceFromUserAgent(session.user_agent)}</span>
                       <UIBadge variant="secondary" className="bg-green-100 text-green-800">
                         <BadgeCheck className="h-3.5 w-3.5 mr-1" />
-                        Active
+                        Current Session
                       </UIBadge>
                     </div>
                     <div className="text-xs text-muted-foreground">
@@ -175,9 +189,9 @@ export default function SecuritySection() {
           )}
         </CardContent>
         <CardFooter>
-          <Button variant="outline" className="w-full" disabled={sessions.length === 0}>
-            Sign out of all other devices
-          </Button>
+          <p className="text-xs text-center w-full text-muted-foreground">
+            This is your current active session. For security reasons, if you need to sign out from all devices, please contact support.
+          </p>
         </CardFooter>
       </Card>
 

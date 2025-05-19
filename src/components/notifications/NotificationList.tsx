@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Bell } from "lucide-react";
+import { Bell, LoaderCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
@@ -20,11 +20,13 @@ interface Notification {
 interface NotificationListProps {
   notifications: Notification[];
   onMarkAsRead?: (id: string) => Promise<void>;
+  isLoading?: boolean;
 }
 
 const NotificationList: React.FC<NotificationListProps> = ({ 
   notifications, 
-  onMarkAsRead 
+  onMarkAsRead,
+  isLoading = false
 }) => {
   const { toast } = useToast();
 
@@ -42,6 +44,17 @@ const NotificationList: React.FC<NotificationListProps> = ({
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-10">
+        <div className="flex flex-col items-center justify-center">
+          <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2" />
+          <p className="text-muted-foreground">Loading notifications...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (notifications.length === 0) {
     return (

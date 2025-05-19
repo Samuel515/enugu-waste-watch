@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, ArrowRight } from "lucide-react";
+import { Calendar, ArrowRight, LoaderCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,7 +97,8 @@ const PickupSchedule = () => {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex justify-center items-center py-6">
+          <div className="flex flex-col justify-center items-center py-6">
+            <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2" />
             <p className="text-muted-foreground">Loading schedules...</p>
           </div>
         ) : (

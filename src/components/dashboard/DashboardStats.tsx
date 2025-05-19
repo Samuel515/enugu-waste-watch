@@ -1,7 +1,9 @@
 
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowUpRight, Truck, AlertTriangle, Calendar, Clock } from "lucide-react";
+import { ArrowUpRight, Truck, AlertTriangle, Calendar, Clock, LoaderCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface StatsCardProps {
   title: string;
@@ -13,9 +15,10 @@ interface StatsCardProps {
     isPositive: boolean;
   };
   color: string;
+  isLoading?: boolean;
 }
 
-const StatsCard = ({ title, value, description, icon, trend, color }: StatsCardProps) => {
+const StatsCard = ({ title, value, description, icon, trend, color, isLoading }: StatsCardProps) => {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -25,8 +28,17 @@ const StatsCard = ({ title, value, description, icon, trend, color }: StatsCardP
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        {isLoading ? (
+          <div className="flex items-center space-x-2">
+            <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Loading...</span>
+          </div>
+        ) : (
+          <>
+            <div className="text-2xl font-bold">{value}</div>
+            <p className="text-xs text-muted-foreground">{description}</p>
+          </>
+        )}
       </CardContent>
       {trend && (
         <CardFooter>
@@ -48,7 +60,37 @@ interface DashboardStatsProps {
 }
 
 const DashboardStats = ({ userRole }: DashboardStatsProps) => {
-  // Different stats based on user role, all showing zero activity
+  const { user } = useAuth();
+  const [reportsCount, setReportsCount] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchUserReports = async () => {
+      if (user && user.role === "resident") {
+        try {
+          setIsLoading(true);
+          const { count, error } = await supabase
+            .from('reports')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          
+          if (error) {
+            console.error("Error fetching reports count:", error);
+          } else {
+            setReportsCount(count || 0);
+          }
+        } catch (error) {
+          console.error("Error fetching reports count:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchUserReports();
+  }, [user]);
+
+  // Different stats based on user role
   const residentStats = [
     { 
       title: "Collection Schedule", 
@@ -59,10 +101,11 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
     },
     { 
       title: "Reports Made", 
-      value: 0, 
+      value: isLoading ? "..." : reportsCount, 
       description: "Waste issues you've reported", 
       icon: <AlertTriangle className="h-5 w-5" />,
-      color: "waste-yellow" 
+      color: "waste-yellow",
+      isLoading: isLoading
     },
     { 
       title: "Next Collection", 

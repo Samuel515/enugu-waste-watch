@@ -107,7 +107,7 @@ const Profile = () => {
                   <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input 
                     id="email"
-                    value={user.email || ""}
+                    value={user.email}
                     className="pl-10"
                     disabled
                     readOnly

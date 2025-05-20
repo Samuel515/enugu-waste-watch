@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, MapPin, Upload, Trash2, AlertTriangle, CircleAlert, TriangleAlert } from "lucide-react";
+import { Camera, MapPin, Upload, Trash2, AlertTriangle, CircleAlert, TriangleAlert, Loader2 } from "lucide-react";
 import ImageUpload from "@/components/reporting/ImageUpload";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -46,6 +46,13 @@ const WASTE_TYPES = [
   },
 ];
 
+// List of recognized areas in Enugu state
+const ENUGU_AREAS = [
+  "Ogbete", "Agbani", "Trans-Ekulu", "Akpugo", "GRA", "ShopRite", "Independence Layout",
+  "New Haven", "Uwani", "Coal Camp", "Abakpa", "Emene", "Ngwo", "Maryland", "Obiagu",
+  "Ogui", "Asata", "Rangers", "Achara Layout", "Gariki", "9th Mile", "Nike"
+];
+
 const ReportForm = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -61,89 +68,100 @@ const ReportForm = () => {
   const [coordinates, setCoordinates] = useState<{latitude: number, longitude: number} | null>(null);
 
   const handleLocationDetection = async () => {
-  setIsLocationLoading(true);
+    setIsLocationLoading(true);
 
-  // Check if geolocation is supported
-  if (!navigator.geolocation) {
-    setIsLocationLoading(false);
-    toast({
-      title: "Geolocation not supported",
-      description: "Your browser does not support geolocation. Please enter your location manually.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      try {
-        // Store the coordinates
-        const { latitude, longitude } = position.coords;
-        setCoordinates({ latitude, longitude });
-        console.log(`Coordinates: ${latitude}, ${longitude}`);
-
-        // Reverse geocode using Nominatim API
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`, // Increased zoom for more detail
-          {
-            headers: {
-              "User-Agent": "YourAppName/1.0" // Required by Nominatim for production use
-            }
-          }
-        );
-        const data = await response.json();
-
-        // Check if the response contains valid address data
-        if (!data.address) {
-          throw new Error("No address data returned");
-        }
-
-        // Extract address components
-        const { city, town, village, neighbourhood, suburb, county, state, country } = data.address;
-
-        // Build a human-readable location string
-        let area = "";
-        if (neighbourhood || suburb) {
-          area = `${neighbourhood || suburb}, ${city || town || village || county || state}`;
-        } else if (city || town || village) {
-          area = `${city || town || village}, ${country || state || county}`;
-        } else {
-          area = `${state || county || country || "Unknown location"}`;
-        }
-
-        // Fallback if no meaningful data is found
-        if (!area || area.includes("undefined")) {
-          area = "Unknown location";
-        }
-
-        // Update location state
-        setLocation(area);
-        setIsLocationLoading(false);
-
-        toast({
-          title: "Location detected",
-          description: `Your current location is ${area}.`,
-        });
-      } catch (error) {
-        setIsLocationLoading(false);
-        toast({
-          title: "Error fetching location details",
-          description: "Could not retrieve area details. Please try again or enter manually.",
-          variant: "destructive",
-        });
-      }
-    },
-    (error) => {
+    // Check if geolocation is supported
+    if (!navigator.geolocation) {
       setIsLocationLoading(false);
       toast({
-        title: "Error detecting location",
-        description: `${error.message}. Please enter your location manually.`,
+        title: "Geolocation not supported",
+        description: "Your browser does not support geolocation. Please enter your location manually.",
         variant: "destructive",
       });
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
-};
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          // Store the coordinates
+          const { latitude, longitude } = position.coords;
+          setCoordinates({ latitude, longitude });
+          console.log(`Coordinates: ${latitude}, ${longitude}`);
+
+          // Reverse geocode using Nominatim API
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`, 
+            {
+              headers: {
+                "User-Agent": "EnuguWasteWatch/1.0"
+              }
+            }
+          );
+          const data = await response.json();
+
+          // Check if the response contains valid address data
+          if (!data.address) {
+            throw new Error("No address data returned");
+          }
+
+          // Extract address components
+          const { city, town, village, neighbourhood, suburb, county, state, country } = data.address;
+
+          // We're specifically interested in Enugu state locations
+          // First check if state is Enugu, otherwise use a fallback
+          let detectedArea = "";
+          
+          if (state === "Enugu" || county === "Enugu") {
+            // We're in Enugu, try to get the most specific location
+            detectedArea = neighbourhood || suburb || city || town || village || "Enugu";
+            
+            // Try to match detected area with a known Enugu area
+            const matchedArea = ENUGU_AREAS.find(area => 
+              detectedArea.toLowerCase().includes(area.toLowerCase())
+            );
+            
+            if (matchedArea) {
+              detectedArea = matchedArea;
+            }
+          } else {
+            // Default to user's area if we're not in Enugu
+            detectedArea = user?.area || "Enugu";
+            toast({
+              title: "Location outside Enugu",
+              description: "We couldn't detect a location in Enugu. Using default area.",
+              variant: "warning",
+            });
+          }
+
+          // Update location state
+          setLocation(detectedArea);
+          setIsLocationLoading(false);
+
+          toast({
+            title: "Location detected",
+            description: `Your current location is set to ${detectedArea}.`,
+          });
+        } catch (error) {
+          setIsLocationLoading(false);
+          toast({
+            title: "Error fetching location details",
+            description: "Could not retrieve area details. Please try again or enter manually.",
+            variant: "destructive",
+          });
+        }
+      },
+      (error) => {
+        setIsLocationLoading(false);
+        toast({
+          title: "Error detecting location",
+          description: `${error.message}. Please enter your location manually.`,
+          variant: "destructive",
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -294,17 +312,31 @@ const ReportForm = () => {
                 onClick={handleLocationDetection}
                 disabled={isLoading || isLocationLoading}
               >
-                <MapPin className="h-4 w-4 mr-2" />
-                {isLocationLoading ? "Detecting..." : "Detect Location"}
+                {isLocationLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Detecting...
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Detect Location
+                  </>
+                )}
               </Button>
             </div>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Address or area name"
-              disabled={isLoading || isLocationLoading}
-            />
+            <Select value={location} onValueChange={setLocation} disabled={isLoading || isLocationLoading}>
+              <SelectTrigger id="location">
+                <SelectValue placeholder="Select area in Enugu" />
+              </SelectTrigger>
+              <SelectContent>
+                {ENUGU_AREAS.map((area) => (
+                  <SelectItem key={area} value={area}>
+                    {area}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">
@@ -317,7 +349,12 @@ const ReportForm = () => {
           </div>
           
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Submitting..." : "Submit Report"}
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Submitting...
+              </>
+            ) : "Submit Report"}
           </Button>
         </form>
       </CardContent>

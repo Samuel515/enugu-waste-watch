@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { format, isToday, isFuture, parseISO, compareAsc } from "date-fns";
+import { format, isToday, isFuture, parseISO, compareAsc, differenceInDays, differenceInHours } from "date-fns";
 
 interface PickupScheduleItem {
   id: string;
@@ -80,7 +80,7 @@ const PickupSchedule = () => {
   const formatPickupDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
-      return format(date, "MMM d, yyyy");
+      return format(date, "EEEE, MMM d, yyyy");
     } catch (error) {
       return dateStr;
     }
@@ -98,8 +98,21 @@ const PickupSchedule = () => {
   const getStatusText = (dateStr: string) => {
     try {
       const date = parseISO(dateStr);
+      const now = new Date();
+      
       if (isToday(date)) return "Today";
-      return isFuture(date) ? `In ${format(date, "d")} days` : "";
+      
+      if (isFuture(date)) {
+        const daysDiff = differenceInDays(date, now);
+        const hoursDiff = differenceInHours(date, now);
+        
+        if (daysDiff === 0 && hoursDiff > 0) {
+          return `In ${hoursDiff} hours`;
+        }
+        return `In ${daysDiff} days`;
+      }
+      
+      return "";
     } catch (error) {
       return "";
     }
@@ -124,7 +137,7 @@ const PickupSchedule = () => {
                 <p className="text-sm text-waste-green">{nextPickupForUserArea.area}</p>
                 <div className="flex justify-between items-end mt-1">
                   <div>
-                    <p className="text-xs">{formatPickupDate(nextPickupForUserArea.pickup_date)}</p>
+                    <p className="text-xs whitespace-pre-line">{formatPickupDate(nextPickupForUserArea.pickup_date)}</p>
                     <p className="text-xs font-medium">{formatPickupTime(nextPickupForUserArea.pickup_date)}</p>
                   </div>
                   <span className="text-xs bg-waste-green/20 text-waste-green px-2 py-1 rounded">
@@ -155,7 +168,7 @@ const PickupSchedule = () => {
                       </div>
                       <div>
                         <p className="font-medium">{pickup.area}</p>
-                        <p className="text-sm text-muted-foreground">{formatPickupDate(pickup.pickup_date)}</p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-line">{formatPickupDate(pickup.pickup_date)}</p>
                       </div>
                     </div>
                     <p className="text-sm font-medium">{formatPickupTime(pickup.pickup_date)}</p>

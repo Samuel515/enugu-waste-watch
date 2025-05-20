@@ -13,11 +13,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Leaf, Menu, UserCircle, LogOut, Settings, Bell } from "lucide-react";
+import { Leaf, Menu, UserCircle, LogOut, Settings } from "lucide-react";
 
 const Header = () => {
   const { user, logout } = useAuth();
-  const { unreadCount, hasNewNotifications } = useNotifications();
+  const { hasNewNotifications } = useNotifications();
   const isMobile = useIsMobile();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -104,61 +104,50 @@ const Header = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              {/* Only show notifications & user dropdown on non-mobile */}
+              {/* Only show user dropdown on non-mobile */}
               {!isMobile && (
-                <>
-                  <Button size="icon" variant="ghost" asChild className="h-9 w-9 sm:h-10 sm:w-10 relative">
-                    <Link to="/notifications">
-                      <Bell className="h-5 w-5 sm:h-6 sm:w-6" />
-                      {hasNewNotifications && (
-                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full"></span>
-                      )}
-                    </Link>
-                  </Button>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full">
-                        <UserCircle className="h-6 w-6 sm:h-7 sm:w-7" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
-                      <div className="flex flex-col space-y-1 p-2">
-                        <p className="text-sm font-medium leading-none">{user.name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                          {user.email}
-                        </p>
-                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary mt-1">
-                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                        </span>
-                      </div>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/profile" className="cursor-pointer flex w-full items-center">
-                          <UserCircle className="mr-2 h-4 w-4" />
-                          <span>Profile</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to="/settings" className="cursor-pointer flex w-full items-center">
-                          <Settings className="mr-2 h-4 w-4" />
-                          <span>Settings</span>
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={logout} className="cursor-pointer">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full">
+                      <UserCircle className="h-6 w-6 sm:h-7 sm:w-7" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <div className="flex flex-col space-y-1 p-2">
+                      <p className="text-sm font-medium leading-none">{user.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                      <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary mt-1">
+                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                      </span>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="cursor-pointer flex w-full items-center">
+                        <UserCircle className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/settings" className="cursor-pointer flex w-full items-center">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
 
-              {/* Mobile Menu - Show on all screen sizes for consistency */}
+              {/* Mobile Menu Button - Show on all screen sizes for consistency */}
               <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 md:hidden">
                     <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
                     {hasNewNotifications && (
                       <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full"></span>
@@ -190,6 +179,23 @@ const Header = () => {
                           )}
                         </Link>
                       ))}
+                      {/* Add Profile and Settings links to mobile menu */}
+                      <Link
+                        to="/profile"
+                        className="flex w-full items-center py-2 text-sm font-medium transition-all hover:underline"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <UserCircle className="mr-2 h-4 w-4" />
+                        Profile
+                      </Link>
+                      <Link
+                        to="/settings"
+                        className="flex w-full items-center py-2 text-sm font-medium transition-all hover:underline"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
+                      </Link>
                     </div>
                     <Button 
                       variant="outline" 
@@ -221,7 +227,7 @@ const Header = () => {
               {isMobile && (
                 <Sheet>
                   <SheetTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" className="md:hidden">
                       <Menu className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>

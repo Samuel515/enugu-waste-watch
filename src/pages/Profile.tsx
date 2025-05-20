@@ -1,185 +1,148 @@
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Mail, MapPin, LoaderCircle } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { Mail, MapPin, Phone, User, Shield } from "lucide-react";
+
+interface Profile {
+  name: string;
+  email: string;
+  phone_number: string;
+  area: string;
+  role: string;
+}
 
 const Profile = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
   
-  const [name, setName] = useState(user?.name || "");
-  const [area, setArea] = useState(user?.area || "");
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Update form values when user data changes
   useEffect(() => {
-    if (user) {
-      setName(user.name || "");
-      setArea(user.area || "");
-    }
-  }, [user]);
-  
-  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    if (!user) return;
-    
-    setIsLoading(true);
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name,
-          area: area || null
-        })
-        .eq('id', user.id);
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
         
-      if (error) {
-        throw error;
+        // Fetch profile data
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          // Get email from auth.users
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (userError) throw userError;
+          
+          setProfile({
+            name: data.name || '',
+            email: userData?.user?.email || '',
+            phone_number: data.phone_number || '',
+            area: data.area || '',
+            role: data.role || 'resident'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile information",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
       }
-      
-      toast({
-        title: "Profile updated",
-        description: "Your profile information has been updated successfully.",
-      });
-      
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
-      toast({
-        title: "Update failed",
-        description: error.message || "Failed to update profile. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    };
+    
+    fetchProfile();
+  }, [user, toast]);
+  
+  const formatRole = (role: string) => {
+    return role.charAt(0).toUpperCase() + role.slice(1);
   };
-
-  if (!isAuthenticated || !user) {
-    return null;
-  }
-
+  
   return (
     <Layout requireAuth>
-      <div className="container py-8 max-w-3xl">
-        <h1 className="text-3xl font-bold mb-2">Your Profile</h1>
-        <p className="text-muted-foreground mb-8">
-          Manage your personal information and preferences
-        </p>
+      <div className="container py-8">
+        <h1 className="text-3xl font-bold tracking-tight mb-8">Profile</h1>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-            <CardDescription>
-              Update your personal details and preferences
-            </CardDescription>
-          </CardHeader>
-          
-          <form onSubmit={handleUpdateProfile}>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="fullname">Full Name</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                  <Input 
-                    id="fullname"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="pl-10"
-                    placeholder="Your full name"
-                    disabled={isLoading}
-                  />
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Personal Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="h-6 bg-muted rounded animate-pulse"></div>
+                  <div className="h-6 bg-muted rounded animate-pulse"></div>
+                  <div className="h-6 bg-muted rounded animate-pulse"></div>
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                  <Input 
-                    id="email"
-                    value={user.email}
-                    className="pl-10"
-                    disabled
-                    readOnly
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Email address cannot be changed. Please contact support if you need to update your email.
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>User Type</Label>
-                <Select
-                  value={user.role}
-                  disabled
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={user.role.charAt(0).toUpperCase() + user.role.slice(1)} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="resident">Resident</SelectItem>
-                    <SelectItem value="official">Waste Management Official</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  User type cannot be changed. Please contact support if you need a different role.
-                </p>
-              </div>
-              
-              {user.role === "resident" && (
-                <div className="space-y-2">
-                  <Label htmlFor="area">Your Area</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                    <Input 
-                      id="area"
-                      value={area}
-                      onChange={(e) => setArea(e.target.value)}
-                      className="pl-10"
-                      placeholder="e.g., Independence Layout"
-                      disabled={isLoading}
-                    />
+              ) : profile ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <User className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Full Name</p>
+                      <p className="font-medium">{profile.name}</p>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-medium">{profile.email}</p>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Phone</p>
+                      <p className="font-medium">{profile.phone_number || "Not provided"}</p>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Area</p>
+                      <p className="font-medium">{profile.area || "Not specified"}</p>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Role</p>
+                      <p className="font-medium">{formatRole(profile.role)}</p>
+                    </div>
                   </div>
                 </div>
+              ) : (
+                <p className="text-muted-foreground">Failed to load profile information.</p>
               )}
-              
             </CardContent>
-            
-            <CardFooter className="flex justify-between">
-              <Button 
-                variant="outline" 
-                type="button"
-                onClick={() => {
-                  setName(user.name || "");
-                  setArea(user.area || "");
-                }}
-                disabled={isLoading}
-              >
-                Reset
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : "Save Changes"}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
+          </Card>
+        </div>
       </div>
     </Layout>
   );

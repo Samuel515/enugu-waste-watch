@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +20,11 @@ type SignupResult = {
   error?: any;
 };
 
+type PasswordUpdateResult = {
+  success: boolean;
+  message?: string;
+};
+
 interface AuthContextType {
   user: AppUser | null;
   isAuthenticated: boolean;
@@ -31,6 +35,7 @@ interface AuthContextType {
   signInWithApple: () => Promise<void>;
   logout: () => Promise<void>;
   checkEmailExists: (email: string) => Promise<boolean>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<PasswordUpdateResult>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,6 +91,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updatePassword = async (currentPassword: string, newPassword: string): Promise<PasswordUpdateResult> => {
+    try {
+      if (!auth.session?.user) {
+        return { success: false, message: "Not authenticated" };
+      }
+      
+      // First verify the current password by trying to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: auth.session.user.email || '',
+        password: currentPassword,
+      });
+      
+      if (signInError) {
+        return { 
+          success: false, 
+          message: "Current password is incorrect" 
+        };
+      }
+      
+      // Then update to the new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      if (updateError) {
+        return { 
+          success: false, 
+          message: updateError.message 
+        };
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating password:", error);
+      return { 
+        success: false, 
+        message: "An unexpected error occurred" 
+      };
+    }
+  };
+
   const value = {
     user: appUser,
     session: auth.session,
@@ -95,7 +141,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     signInWithGoogle: auth.signInWithGoogle,
     signInWithApple: auth.signInWithApple,
     logout: auth.logout,
-    checkEmailExists: auth.checkEmailExists
+    checkEmailExists: auth.checkEmailExists,
+    updatePassword
   };
 
   return (

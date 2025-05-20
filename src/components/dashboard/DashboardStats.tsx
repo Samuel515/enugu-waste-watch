@@ -1,3 +1,4 @@
+
 import { ReactNode, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpRight, Truck, AlertTriangle, Calendar, Clock, LoaderCircle } from "lucide-react";
@@ -61,16 +62,13 @@ interface DashboardStatsProps {
 const DashboardStats = ({ userRole }: DashboardStatsProps) => {
   const { user } = useAuth();
   const [reportsCount, setReportsCount] = useState<number>(0);
-  const [nextPickup, setNextPickup] = useState<{date: string, time: string} | null>(null);
-  const [isLoadingReports, setIsLoadingReports] = useState<boolean>(true);
-  const [isLoadingPickup, setIsLoadingPickup] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Fetch reports count
   useEffect(() => {
     const fetchUserReports = async () => {
       if (user && user.role === "resident") {
         try {
-          setIsLoadingReports(true);
+          setIsLoading(true);
           const { count, error } = await supabase
             .from('reports')
             .select('*', { count: 'exact', head: true })
@@ -84,82 +82,37 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
         } catch (error) {
           console.error("Error fetching reports count:", error);
         } finally {
-          setIsLoadingReports(false);
+          setIsLoading(false);
         }
-      } else {
-        setIsLoadingReports(false);
       }
     };
 
     fetchUserReports();
   }, [user]);
 
-  // Fetch next pickup schedule
-  useEffect(() => {
-    const fetchNextPickup = async () => {
-      if (user && user.area) {
-        try {
-          setIsLoadingPickup(true);
-          
-          const now = new Date().toISOString();
-          
-          const { data, error } = await supabase
-            .from('pickup_schedules')
-            .select('*')
-            .eq('area', user.area)
-            .eq('status', 'scheduled')
-            .gte('pickup_date', now)
-            .order('pickup_date', { ascending: true })
-            .limit(1)
-            .single();
-          
-          if (error && error.code !== 'PGRST116') { // Not found error
-            console.error("Error fetching next pickup:", error);
-          } else if (data) {
-            const pickupDate = new Date(data.pickup_date);
-            setNextPickup({
-              date: pickupDate.toLocaleDateString(),
-              time: pickupDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching next pickup:", error);
-        } finally {
-          setIsLoadingPickup(false);
-        }
-      } else {
-        setIsLoadingPickup(false);
-      }
-    };
-
-    fetchNextPickup();
-  }, [user]);
-
   // Different stats based on user role
   const residentStats = [
     { 
       title: "Collection Schedule", 
-      value: nextPickup ? nextPickup.date : "Not scheduled", 
+      value: "Not scheduled", 
       description: "Next waste collection in your area", 
       icon: <Calendar className="h-5 w-5" />,
-      color: "waste-blue",
-      isLoading: isLoadingPickup
+      color: "waste-blue" 
     },
     { 
       title: "Reports Made", 
-      value: reportsCount, 
+      value: isLoading ? "..." : reportsCount, 
       description: "Waste issues you've reported", 
       icon: <AlertTriangle className="h-5 w-5" />,
       color: "waste-yellow",
-      isLoading: isLoadingReports
+      isLoading: isLoading
     },
     { 
       title: "Next Collection", 
-      value: nextPickup ? nextPickup.time : "N/A", 
+      value: "N/A", 
       description: "Scheduled time for pickup", 
       icon: <Clock className="h-5 w-5" />,
-      color: "waste-green",
-      isLoading: isLoadingPickup
+      color: "waste-green" 
     },
   ];
 

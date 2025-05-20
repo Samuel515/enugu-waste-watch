@@ -1,163 +1,239 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/components/ui/use-toast";
-import { LoaderCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Mail, BadgeCheck, LoaderCircle } from "lucide-react";
+import { Badge as UIBadge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export const SecuritySection = () => {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+interface CustomSession {
+  id: string;
+  created_at: string;
+  user_agent: string;
+  ip: string | null;
+  last_sign_in_at: string;
+}
+
+export default function SecuritySection() {
+  const { user } = useAuth();
+  const [emailOnLogin, setEmailOnLogin] = useState(true);
+  const [twoFactorAuth, setTwoFactorAuth] = useState(false);
+  const [sessions, setSessions] = useState<CustomSession[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showContactModal, setShowContactModal] = useState(false);
   
-  const { updatePassword } = useAuth();
-  const { toast } = useToast();
-  
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all password fields",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Passwords do not match",
-        description: "New password and confirmation must match",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (newPassword.length < 6) {
-      toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      const result = await updatePassword(currentPassword, newPassword);
-      
-      if (result.success) {
-        toast({
-          title: "Password updated",
-          description: "Your password has been changed successfully",
-        });
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        setIsLoading(true);
         
-        // Clear form
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      } else {
-        toast({
-          title: "Failed to update password",
-          description: result.message || "Please check your current password and try again",
-          variant: "destructive",
-        });
+        // Get current session
+        const { data } = await supabase.auth.getSession();
+        
+        if (data && data.session) {
+          // Format it for display - properly access session properties
+          const session = data.session;
+          const customSession: CustomSession = {
+            id: session.access_token.substring(0, 8), // Use a part of access token as id
+            created_at: new Date().toISOString(), // Use current date as fallback
+            user_agent: navigator.userAgent,
+            ip: null, // Not available client-side
+            last_sign_in_at: new Date().toISOString() // Use current date as fallback
+          };
+          
+          setSessions([customSession]);
+        }
+      } catch (error) {
+        console.error('Error fetching sessions:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error changing password:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again later.",
-        variant: "destructive",
+    };
+    
+    if (user) {
+      fetchSessions();
+    }
+  }, [user]);
+  
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric'
       });
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  const truncateUserAgent = (userAgent: string) => {
+    return userAgent.length > 65 ? userAgent.substring(0, 62) + '...' : userAgent;
+  };
+
+  const getDeviceFromUserAgent = (userAgent: string) => {
+    if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+      return 'iOS Device';
+    } else if (userAgent.includes('Android')) {
+      return 'Android Device';
+    } else if (userAgent.includes('Windows')) {
+      return 'Windows Device';
+    } else if (userAgent.includes('Mac')) {
+      return 'Mac Device';
+    } else {
+      return 'Unknown Device';
     }
   };
   
+  const handleContactSupport = () => {
+    setShowContactModal(true);
+  };
+
+  const handleSendEmail = () => {
+    window.location.href = "mailto:support@enuguwaste.gov.ng?subject=Account%20Deletion%20Request&body=Hello%20Support,%0A%0AI%20would%20like%20to%20request%20my%20account%20deletion.%0A%0AMy%20account%20details:%0AName:%20" + (user?.name || "") + "%0AEmail:%20" + (user?.email || "") + "%0A%0AThank%20you.";
+    setShowContactModal(false);
+  };
+
   return (
     <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">Security</h3>
+        <p className="text-sm text-muted-foreground">
+          Update your account security settings
+        </p>
+      </div>
+      
       <Card>
         <CardHeader>
-          <CardTitle>Change Password</CardTitle>
+          <CardTitle>Notifications</CardTitle>
           <CardDescription>
-            Update your password to keep your account secure
+            Configure your security notification preferences
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
-              <Input
-                id="current-password"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                disabled={isLoading}
-              />
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between space-x-2">
+            <Label htmlFor="email-signin" className="flex-1">
+              Email me when a new login is detected
+            </Label>
+            <Switch
+              id="email-signin"
+              checked={emailOnLogin}
+              onCheckedChange={setEmailOnLogin}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between space-x-2">
+            <div className="space-y-0.5 flex-1">
+              <Label htmlFor="two-factor">Two-factor authentication</Label>
+              <p className="text-[0.8rem] text-muted-foreground">
+                Add an extra layer of security to your account
+              </p>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Password"
-              )}
-            </Button>
-          </form>
+            <Switch
+              id="two-factor"
+              checked={twoFactorAuth}
+              onCheckedChange={setTwoFactorAuth}
+            />
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Current Session</CardTitle>
+          <CardTitle>Active Sessions</CardTitle>
           <CardDescription>
-            Information about your current login session
+            Manage your active login sessions
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-sm">
-            <p className="text-muted-foreground mb-2">You are currently signed in on this device.</p>
-            <div className="p-3 rounded border bg-muted/20">
-              <p className="font-medium">Current Device</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Last active: {new Date().toLocaleString()}
-              </p>
+          {isLoading ? (
+            <div className="space-y-3">
+              <div className="flex flex-col items-center justify-center py-4">
+                <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2" />
+                <p className="text-sm text-muted-foreground">Loading your sessions...</p>
+              </div>
+              <Skeleton className="h-16 w-full rounded-md" />
             </div>
-          </div>
+          ) : sessions.length === 0 ? (
+            <div className="py-6 text-center">
+              <p className="text-sm text-muted-foreground">No active sessions found</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sessions.map((session) => (
+                <div key={session.id} className="rounded-md border p-4">
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{getDeviceFromUserAgent(session.user_agent)}</span>
+                      <UIBadge variant="secondary" className="bg-green-100 text-green-800">
+                        <BadgeCheck className="h-3.5 w-3.5 mr-1" />
+                        Current Session
+                      </UIBadge>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <p>Last active: {formatDate(session.last_sign_in_at)}</p>
+                      <p title={session.user_agent}>Browser: {truncateUserAgent(session.user_agent)}</p>
+                      {session.ip && <p>IP Address: {session.ip}</p>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+        <CardFooter>
+          <p className="text-xs text-center w-full text-muted-foreground">
+            This is your current active session. For security reasons, if you need to sign out from all devices, please contact support.
+          </p>
+        </CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Danger Zone</CardTitle>
+          <CardDescription>
+            Irreversible account actions
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Once you delete your account, all of your data will be permanently removed. This action cannot be undone.
+          </p>
+          <Button 
+            variant="destructive" 
+            className="w-full md:w-auto"
+            onClick={handleContactSupport}
+          >
+            <span className="hidden md:inline">Contact support to delete account</span>
+            <span className="inline md:hidden">Contact support</span>
+          </Button>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showContactModal} onOpenChange={setShowContactModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Contact Support</AlertDialogTitle>
+            <AlertDialogDescription>
+              To delete your account, please email our support team. They will verify your identity and process your request.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSendEmail}>
+              <Mail className="mr-2 h-4 w-4" />
+              Send Email
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-};
+}

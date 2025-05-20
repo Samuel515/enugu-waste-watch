@@ -1,295 +1,131 @@
 
-import { useState, useEffect } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, X, Bell, LogOut, Settings, User } from "lucide-react";
-import { useMobile } from "@/hooks/use-mobile";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Leaf, Menu, UserCircle, LogOut, Settings, Bell } from "lucide-react";
 
 const Header = () => {
-  const { isMobile } = useMobile();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, logout } = useAuth();
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
-  const [hasCollectionToday, setHasCollectionToday] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const menuItems = [
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Report Waste", href: "/report" },
+    { label: "Pickup Schedule", href: "/schedule" },
+    { label: "Notifications", href: "/notifications" },
+  ];
+
+  const officialMenuItems = [
+    { label: "Manage Reports", href: "/manage-reports" },
+    { label: "Update Schedules", href: "/update-schedules" },
+  ];
+
+  const adminMenuItems = [
+    { label: "Analytics", href: "/analytics" },
+    { label: "Manage Users", href: "/manage-users" },
+    { label: "Settings", href: "/settings" },
+  ];
   
-  // Function to get initials from user name
-  const getInitials = (name: string) => {
-    if (!name) return "U";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
-  // Toggle mobile menu
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  // Close mobile menu when a link is clicked
-  const closeMenu = () => {
-    setIsMenuOpen(false);
-  };
-
-  // Get notification count from localStorage
-  const getReadNotificationsFromStorage = (): string[] => {
-    try {
-      const storedIds = localStorage.getItem('readNotifications');
-      return storedIds ? JSON.parse(storedIds) : [];
-    } catch (e) {
-      console.error('Error parsing read notifications from storage:', e);
-      return [];
-    }
-  };
-
-  // Fetch unread notifications count
-  useEffect(() => {
-    const fetchUnreadNotificationsCount = async () => {
-      if (!user) {
-        setUnreadNotificationsCount(0);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('id')
-          .or(`for_user_id.eq.${user.id},for_all.eq.true`) as any;
-          
-        if (error) throw error;
-        
-        if (data) {
-          const readIds = getReadNotificationsFromStorage();
-          const unreadCount = data.filter(item => !readIds.includes(item.id)).length;
-          setUnreadNotificationsCount(unreadCount);
-        }
-      } catch (error) {
-        console.error('Error fetching notifications count:', error);
-      }
-    };
-
-    // Check for collection today
-    const checkCollectionToday = async () => {
-      if (!user || !user.area) return;
-
-      try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const { data, error } = await supabase
-          .from('pickup_schedules')
-          .select('*')
-          .eq('area', user.area)
-          .eq('status', 'scheduled')
-          .gte('pickup_date', today.toISOString())
-          .lt('pickup_date', tomorrow.toISOString()) as any;
-
-        if (error) throw error;
-        
-        setHasCollectionToday(data && data.length > 0);
-      } catch (error) {
-        console.error('Error checking collection today:', error);
-      }
-    };
-
-    fetchUnreadNotificationsCount();
-    checkCollectionToday();
-
-    // Set up interval to refresh
-    const interval = setInterval(() => {
-      fetchUnreadNotificationsCount();
-      checkCollectionToday();
-    }, 60000); // Check every minute
-
-    return () => clearInterval(interval);
-  }, [user]);
+  const allMenuItems = [...menuItems, 
+                         ...(user?.role === "official" ? officialMenuItems : []),
+                         ...(user?.role === "admin" ? adminMenuItems : [])];
+  
+  // Determine if page requires auth to prevent homepage routing
+  const isAuthenticatedPage = user && window.location.pathname !== "/";
 
   return (
-    <header className="border-b bg-background sticky top-0 z-20">
-      <div className="container flex items-center justify-between h-16">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <img src="/icon.svg" alt="Logo" className="h-8 w-8" />
-          <span className="font-bold text-lg hidden sm:inline">Waste Watch</span>
-        </Link>
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-16 items-center justify-between">
+        <div className="flex items-center gap-2">
+          {isAuthenticatedPage ? (
+            <div className="flex items-center gap-2">
+              <Leaf className="h-6 w-6 text-waste-green" />
+              <span className="text-lg font-bold xs:text-xs sm:text-sm md:text-lg lg:text-xl">Enugu Waste Watch</span>
+            </div>
+          ) : (
+            <Link to="/" className="flex items-center gap-2">
+              <Leaf className="h-6 w-6 text-waste-green" />
+              <span className="text-lg font-bold xs:text-xs sm:text-sm md:text-lg lg:text-xl">Enugu Waste Watch</span>
+            </Link>
+          )}
+        </div>
 
-        {/* Mobile menu button */}
-        {isMobile && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={toggleMenu}
-          >
-            {isMenuOpen ? <X /> : <Menu />}
-          </Button>
-        )}
-
-        {/* Navigation - Desktop */}
-        {!isMobile && (
+        {/* Desktop Navigation */}
+        {user && (
           <nav className="hidden md:flex items-center gap-6">
-            <NavLink
-              to="/"
-              className={({ isActive }) =>
-                `text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? "text-primary" : "text-muted-foreground"
-                }`
-              }
-            >
-              Home
-            </NavLink>
-            {user && (
-              <>
-                <NavLink
-                  to="/dashboard"
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-primary ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`
-                  }
-                >
-                  Dashboard
-                </NavLink>
-                
-                <NavLink
-                  to="/reports"
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-primary ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`
-                  }
-                >
-                  Reports
-                </NavLink>
-                
-                <NavLink
-                  to="/schedule"
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-primary ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`
-                  }
-                >
-                  Schedule
-                </NavLink>
-                
-                <NavLink
-                  to="/notifications"
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-primary relative ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`
-                  }
-                >
-                  Notifications
-                  {unreadNotificationsCount > 0 && (
-                    <span className="absolute -top-1 -right-3 w-2 h-2 bg-red-500 rounded-full"></span>
-                  )}
-                </NavLink>
-              </>
-            )}
-            <NavLink
-              to="/about"
-              className={({ isActive }) =>
-                `text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? "text-primary" : "text-muted-foreground"
-                }`
-              }
-            >
-              About
-            </NavLink>
-            <NavLink
-              to="/faq"
-              className={({ isActive }) =>
-                `text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? "text-primary" : "text-muted-foreground"
-                }`
-              }
-            >
-              FAQ
-            </NavLink>
+            {menuItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                className="text-sm font-medium transition-colors hover:text-primary"
+              >
+                {item.label}
+              </Link>
+            ))}
+            
+            {user.role === "official" && officialMenuItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                className="text-sm font-medium transition-colors hover:text-primary"
+              >
+                {item.label}
+              </Link>
+            ))}
+            
+            {user.role === "admin" && adminMenuItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                className="text-sm font-medium transition-colors hover:text-primary"
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
         )}
 
-        {/* Auth buttons or User menu */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           {user ? (
             <>
-              {!isMobile && (
-                <NavLink 
-                  to="/notifications"
-                  className="mr-2 relative p-2 rounded-full hover:bg-accent"
-                >
-                  <Bell className="h-5 w-5" />
-                  {unreadNotificationsCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                  )}
-                </NavLink>
-              )}
-
+              <Button size="icon" variant="ghost" asChild className="h-9 w-9 sm:h-10 sm:w-10">
+                <Link to="/notifications">
+                  <Bell className="h-5 w-5 sm:h-6 sm:w-6" />
+                </Link>
+              </Button>
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="relative h-8 w-8 rounded-full"
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                    </Avatar>
+                  <Button variant="ghost" className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-full">
+                    <UserCircle className="h-6 w-6 sm:h-7 sm:w-7" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {user.name}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <div className="flex flex-col space-y-1 p-2">
+                    <p className="text-sm font-medium leading-none">{user.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user.email}
+                    </p>
+                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary mt-1">
+                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    </span>
+                  </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link to="/profile" className="cursor-pointer flex w-full items-center">
-                      <User className="mr-2 h-4 w-4" />
+                      <UserCircle className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/notifications" className="cursor-pointer flex w-full items-center">
-                      <Bell className="mr-2 h-4 w-4" />
-                      <span>Notifications</span>
-                      {unreadNotificationsCount > 0 && (
-                        <Badge className="ml-auto bg-red-500 text-white text-[10px] px-1.5">
-                          {unreadNotificationsCount}
-                        </Badge>
-                      )}
-                    </Link>
-                  </DropdownMenuItem>
-                  {hasCollectionToday && (
-                    <DropdownMenuItem className="bg-blue-50 text-blue-800">
-                      <Bell className="mr-2 h-4 w-4 text-blue-600" />
-                      <span>Collection today in your area</span>
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuItem asChild>
                     <Link to="/settings" className="cursor-pointer flex w-full items-center">
                       <Settings className="mr-2 h-4 w-4" />
@@ -297,154 +133,70 @@ const Header = () => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={logout}>
+                  <DropdownMenuItem onClick={logout} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* Mobile Menu */}
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 md:hidden">
+                    <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <span className="sr-only">Toggle menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right">
+                  <div className="grid gap-4 py-4">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                      <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary mt-1 w-fit">
+                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                      </span>
+                    </div>
+                    <div className="grid gap-2 py-6">
+                      {allMenuItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          to={item.href}
+                          className="flex w-full items-center py-2 text-sm font-medium transition-all hover:underline"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        logout();
+                        setIsMobileMenuOpen(false);
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </>
           ) : (
             <>
-              <Button variant="ghost" asChild>
-                <Link to="/auth?tab=login">Log In</Link>
+              <Button asChild variant="outline">
+                <Link to="/auth">Sign In</Link>
               </Button>
-              <Button asChild>
+              <Button asChild className="hidden md:block">
                 <Link to="/auth?tab=register">Sign Up</Link>
               </Button>
             </>
           )}
         </div>
       </div>
-
-      {/* Mobile navigation */}
-      {isMobile && isMenuOpen && (
-        <div className="md:hidden p-4 border-t bg-background">
-          <nav className="flex flex-col space-y-4">
-            <NavLink
-              to="/"
-              className={({ isActive }) =>
-                `text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? "text-primary" : "text-muted-foreground"
-                }`
-              }
-              onClick={closeMenu}
-            >
-              Home
-            </NavLink>
-            {user && (
-              <>
-                <NavLink
-                  to="/dashboard"
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-primary ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`
-                  }
-                  onClick={closeMenu}
-                >
-                  Dashboard
-                </NavLink>
-                <NavLink
-                  to="/reports"
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-primary ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`
-                  }
-                  onClick={closeMenu}
-                >
-                  Reports
-                </NavLink>
-                <NavLink
-                  to="/schedule"
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-primary ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`
-                  }
-                  onClick={closeMenu}
-                >
-                  Schedule
-                </NavLink>
-                <NavLink
-                  to="/notifications"
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-primary relative ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`
-                  }
-                  onClick={closeMenu}
-                >
-                  Notifications
-                  {unreadNotificationsCount > 0 && (
-                    <Badge className="ml-2 bg-red-500 text-white text-[10px] px-1.5">
-                      {unreadNotificationsCount}
-                    </Badge>
-                  )}
-                </NavLink>
-                <NavLink
-                  to="/profile"
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-primary ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`
-                  }
-                  onClick={closeMenu}
-                >
-                  Profile
-                </NavLink>
-                <NavLink
-                  to="/settings"
-                  className={({ isActive }) =>
-                    `text-sm font-medium transition-colors hover:text-primary ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`
-                  }
-                  onClick={closeMenu}
-                >
-                  Settings
-                </NavLink>
-              </>
-            )}
-            <NavLink
-              to="/about"
-              className={({ isActive }) =>
-                `text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? "text-primary" : "text-muted-foreground"
-                }`
-              }
-              onClick={closeMenu}
-            >
-              About
-            </NavLink>
-            <NavLink
-              to="/faq"
-              className={({ isActive }) =>
-                `text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? "text-primary" : "text-muted-foreground"
-                }`
-              }
-              onClick={closeMenu}
-            >
-              FAQ
-            </NavLink>
-            {user && (
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => {
-                  logout();
-                  closeMenu();
-                }}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Log Out
-              </Button>
-            )}
-          </nav>
-        </div>
-      )}
     </header>
   );
 };

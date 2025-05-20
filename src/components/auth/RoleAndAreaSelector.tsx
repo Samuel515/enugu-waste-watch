@@ -1,16 +1,10 @@
 
-import { useState, useEffect } from "react";
-import { Label } from "@/components/ui/label";
 import { UserRole } from "@/contexts/AuthContext";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { enuguLocations } from "@/utils/locationData";
+import { MapPin, ShieldCheck } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface RoleAndAreaSelectorProps {
   role: UserRole;
@@ -18,9 +12,9 @@ interface RoleAndAreaSelectorProps {
   area: string;
   setArea: (area: string) => void;
   isLoading: boolean;
-  verificationCode?: string;
-  setVerificationCode?: (code: string) => void;
-  verificationValid?: boolean;
+  verificationCode: string;
+  setVerificationCode: (code: string) => void;
+  verificationValid: boolean;
 }
 
 export const RoleAndAreaSelector = ({
@@ -31,21 +25,19 @@ export const RoleAndAreaSelector = ({
   isLoading,
   verificationCode,
   setVerificationCode,
-  verificationValid = true,
+  verificationValid
 }: RoleAndAreaSelectorProps) => {
-  const [showVerificationField, setShowVerificationField] = useState(
-    role === "official" || role === "admin"
-  );
-
-  // Show verification field when role is official or admin
+  const [showVerification, setShowVerification] = useState(false);
+  
+  // Update showVerification whenever role changes
   useEffect(() => {
-    setShowVerificationField(role === "official" || role === "admin");
+    setShowVerification(role === "official" || role === "admin");
   }, [role]);
 
   return (
-    <div className="space-y-4">
+    <>
       <div className="space-y-2">
-        <Label>Role</Label>
+        <Label htmlFor="role">Role</Label>
         <Select
           value={role}
           onValueChange={(value) => setRole(value as UserRole)}
@@ -56,60 +48,53 @@ export const RoleAndAreaSelector = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="resident">Resident</SelectItem>
-            <SelectItem value="official">Waste Official</SelectItem>
+            <SelectItem value="official">Waste Management Official</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
           </SelectContent>
         </Select>
       </div>
-
-      {role === "resident" && (
+      
+      {showVerification && (
         <div className="space-y-2">
-          <Label htmlFor="area">Your Area</Label>
-          <Select
-            value={area}
-            onValueChange={setArea}
-            disabled={isLoading}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select your area" />
-            </SelectTrigger>
-            <SelectContent>
-              {enuguLocations.map((location) => (
-                <SelectItem key={location} value={location}>
-                  {location}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {showVerificationField && setVerificationCode && (
-        <div className="space-y-2">
-          <Label
-            htmlFor="verification"
-            className={!verificationValid ? "text-destructive" : ""}
-          >
-            Verification Code
+          <Label htmlFor="verificationCode" className="flex items-center">
+            Verification Code 
+            <span className="text-xs text-muted-foreground ml-2">(Required for Officials & Admins)</span>
           </Label>
-          <Input
-            id="verification"
-            type="text"
-            placeholder="Enter verification code"
-            value={verificationCode || ""}
-            onChange={(e) => setVerificationCode(e.target.value)}
-            className={`${
-              !verificationValid ? "border-destructive" : ""
-            }`}
-            disabled={isLoading}
-          />
-          {!verificationValid && (
-            <p className="text-xs text-destructive">
-              Invalid verification code
-            </p>
+          <div className="relative">
+            <ShieldCheck className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            <Input
+              id="verificationCode"
+              type="password"
+              placeholder="Enter verification code"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              className={`pl-10 ${!verificationValid && verificationCode ? 'border-red-500' : ''}`}
+              disabled={isLoading}
+            />
+          </div>
+          {!verificationValid && verificationCode && (
+            <p className="text-sm text-red-500">Invalid verification code</p>
           )}
         </div>
       )}
-    </div>
+      
+      {role === "resident" && (
+        <div className="space-y-2">
+          <Label htmlFor="area">Your Area</Label>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            <Input
+              id="area"
+              type="text"
+              placeholder="e.g., Independence Layout"
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              className="pl-10"
+              disabled={isLoading}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 };

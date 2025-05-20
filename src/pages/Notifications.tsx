@@ -4,10 +4,12 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NotificationList from "@/components/notifications/NotificationList";
-import { Bell, LoaderCircle } from "lucide-react";
+import { Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoaderCircle } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -28,41 +30,6 @@ const Notifications = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
-  
-  // Get read notification IDs from localStorage
-  const getReadNotificationsFromStorage = (): string[] => {
-    try {
-      const storedIds = localStorage.getItem('readNotifications');
-      return storedIds ? JSON.parse(storedIds) : [];
-    } catch (e) {
-      console.error('Error parsing read notifications from storage:', e);
-      return [];
-    }
-  };
-  
-  // Save read notification ID to localStorage
-  const saveReadNotificationToStorage = (id: string) => {
-    try {
-      const existingIds = getReadNotificationsFromStorage();
-      if (!existingIds.includes(id)) {
-        localStorage.setItem('readNotifications', JSON.stringify([...existingIds, id]));
-      }
-    } catch (e) {
-      console.error('Error saving read notification to storage:', e);
-    }
-  };
-  
-  // Save all notifications as read to localStorage
-  const saveAllNotificationsAsReadToStorage = (ids: string[]) => {
-    try {
-      const existingIds = getReadNotificationsFromStorage();
-      const combinedIds = [...new Set([...existingIds, ...ids])];
-      localStorage.setItem('readNotifications', JSON.stringify(combinedIds));
-    } catch (e) {
-      console.error('Error saving all notifications as read to storage:', e);
-    }
-  };
   
   // Fetch notifications from Supabase
   useEffect(() => {
@@ -81,14 +48,12 @@ const Notifications = () => {
         if (error) throw error;
         
         if (data) {
-          const readIds = getReadNotificationsFromStorage();
-          
           const formattedNotifications: Notification[] = data.map((item: any) => ({
             id: item.id,
             title: item.title,
             message: item.message,
             created_at: item.created_at,
-            read: item.read || readIds.includes(item.id),
+            read: item.read,
             type: item.type,
             read_at: item.read_at,
             for_user_id: item.for_user_id
@@ -115,10 +80,8 @@ const Notifications = () => {
     if (!user) return;
     
     try {
-      setIsMarkingAllRead(true);
-      
       const unreadNotifications = notifications
-        .filter(n => !n.read)
+        .filter(n => !n.read && n.for_user_id === user.id)
         .map(n => n.id);
         
       if (unreadNotifications.length === 0) return;
@@ -132,13 +95,10 @@ const Notifications = () => {
         
       if (error) throw error;
       
-      // Save to localStorage
-      saveAllNotificationsAsReadToStorage(unreadNotifications);
-      
       // Update local state
       setNotifications(prev => 
         prev.map(notification => {
-          if (!notification.read) {
+          if (!notification.read && notification.for_user_id === user.id) {
             return { ...notification, read: true, read_at: now };
           }
           return notification;
@@ -156,8 +116,6 @@ const Notifications = () => {
         description: "Failed to mark notifications as read",
         variant: "destructive"
       });
-    } finally {
-      setIsMarkingAllRead(false);
     }
   };
   
@@ -173,9 +131,6 @@ const Notifications = () => {
         .eq('id', id) as any;
         
       if (error) throw error;
-      
-      // Save to localStorage
-      saveReadNotificationToStorage(id);
       
       // Update local state
       setNotifications(prev => 
@@ -233,14 +188,9 @@ const Notifications = () => {
               variant="outline" 
               size="sm"
               onClick={handleMarkAllAsRead}
-              disabled={unreadCount === 0 || isMarkingAllRead}
+              disabled={unreadCount === 0}
             >
-              {isMarkingAllRead ? (
-                <>
-                  <LoaderCircle className="h-4 w-4 animate-spin mr-1" />
-                  Marking...
-                </>
-              ) : "Mark All as Read"}
+              Mark All as Read
             </Button>
           </div>
         </div>
@@ -279,7 +229,6 @@ const Notifications = () => {
                 timestamp: n.created_at
               }))} 
               onMarkAsRead={handleMarkAsRead}
-              isLoading={isLoading}
             />
           </TabsContent>
           
@@ -290,7 +239,6 @@ const Notifications = () => {
                 timestamp: n.created_at
               }))} 
               onMarkAsRead={handleMarkAsRead}
-              isLoading={isLoading}
             />
           </TabsContent>
           
@@ -301,7 +249,6 @@ const Notifications = () => {
                 timestamp: n.created_at
               }))} 
               onMarkAsRead={handleMarkAsRead}
-              isLoading={isLoading}
             />
           </TabsContent>
         </Tabs>

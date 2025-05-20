@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -63,104 +64,6 @@ const ReportForm = () => {
   const [wasteType, setWasteType] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLocationLoading, setIsLocationLoading] = useState(false);
-  const [coordinates, setCoordinates] = useState<{latitude: number, longitude: number} | null>(null);
-
-  const handleLocationDetection = async () => {
-    setIsLocationLoading(true);
-
-    // Check if geolocation is supported
-    if (!navigator.geolocation) {
-      setIsLocationLoading(false);
-      toast({
-        title: "Geolocation not supported",
-        description: "Your browser does not support geolocation. Please enter your location manually.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          // Store the coordinates
-          const { latitude, longitude } = position.coords;
-          setCoordinates({ latitude, longitude });
-          console.log(`Coordinates: ${latitude}, ${longitude}`);
-
-          // Reverse geocode using Nominatim API
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`, 
-            {
-              headers: {
-                "User-Agent": "EnuguWasteWatch/1.0"
-              }
-            }
-          );
-          const data = await response.json();
-
-          // Check if the response contains valid address data
-          if (!data.address) {
-            throw new Error("No address data returned");
-          }
-
-          // Extract address components
-          const { city, town, village, neighbourhood, suburb, county, state, country } = data.address;
-
-          // We're specifically interested in Enugu state locations
-          // First check if state is Enugu, otherwise use a fallback
-          let detectedArea = "";
-          
-          if (state === "Enugu" || county === "Enugu") {
-            // We're in Enugu, try to get the most specific location
-            detectedArea = neighbourhood || suburb || city || town || village || "Enugu";
-            
-            // Try to match detected area with a known Enugu area
-            const matchedArea = ENUGU_AREAS.find(area => 
-              detectedArea.toLowerCase().includes(area.toLowerCase())
-            );
-            
-            if (matchedArea) {
-              detectedArea = matchedArea;
-            }
-          } else {
-            // Default to user's area if we're not in Enugu
-            detectedArea = user?.area || "Enugu";
-            toast({
-              title: "Location outside Enugu",
-              description: "We couldn't detect a location in Enugu. Using default area.",
-              variant: "default",
-            });
-          }
-
-          // Update location state
-          setLocation(detectedArea);
-          setIsLocationLoading(false);
-
-          toast({
-            title: "Location detected",
-            description: `Your current location is set to ${detectedArea}.`,
-          });
-        } catch (error) {
-          setIsLocationLoading(false);
-          toast({
-            title: "Error fetching location details",
-            description: "Could not retrieve area details. Please try again or enter manually.",
-            variant: "destructive",
-          });
-        }
-      },
-      (error) => {
-        setIsLocationLoading(false);
-        toast({
-          title: "Error detecting location",
-          description: `${error.message}. Please enter your location manually.`,
-          variant: "destructive",
-        });
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -198,7 +101,6 @@ const ReportForm = () => {
           title,
           description,
           location,
-          coordinates: coordinates ? coordinates : null,
           status: 'pending',
           user_id: user.id,
           user_name: user.name,
@@ -231,7 +133,6 @@ const ReportForm = () => {
       setLocation(user?.area || "");
       setWasteType("");
       setImages([]);
-      setCoordinates(null);
       
       // Redirect to the reports page
       navigate('/reports');
@@ -302,29 +203,8 @@ const ReportForm = () => {
           </div>
           
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="location">Location</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleLocationDetection}
-                disabled={isLoading || isLocationLoading}
-              >
-                {isLocationLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Detecting...
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Detect Location
-                  </>
-                )}
-              </Button>
-            </div>
-            <Select value={location} onValueChange={setLocation} disabled={isLoading || isLocationLoading}>
+            <Label htmlFor="location">Location</Label>
+            <Select value={location} onValueChange={setLocation} disabled={isLoading}>
               <SelectTrigger id="location">
                 <SelectValue placeholder="Select area in Enugu" />
               </SelectTrigger>

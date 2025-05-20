@@ -60,38 +60,90 @@ const ReportForm = () => {
   const [isLocationLoading, setIsLocationLoading] = useState(false);
   const [coordinates, setCoordinates] = useState<{latitude: number, longitude: number} | null>(null);
 
-  const handleLocationDetection = () => {
-    setIsLocationLoading(true);
-    
-    // Use the browser's geolocation API
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
+  const handleLocationDetection = async () => {
+  setIsLocationLoading(true);
+
+  // Check if geolocation is supported
+  if (!navigator.geolocation) {
+    setIsLocationLoading(false);
+    toast({
+      title: "Geolocation not supported",
+      description: "Your browser does not support geolocation. Please enter your location manually.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      try {
         // Store the coordinates
-        setCoordinates({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude
-        });
-        
-        // For this demo, we'll use a formatted string of the coordinates
-        const locationStr = `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
-        setLocation(`Detected: ${user?.area || locationStr}`);
+        const { latitude, longitude } = position.coords;
+        setCoordinates({ latitude, longitude });
+        console.log(`Coordinates: ${latitude}, ${longitude}`);
+
+        // Reverse geocode using Nominatim API
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&addressdetails=1`, // Increased zoom for more detail
+          {
+            headers: {
+              "User-Agent": "YourAppName/1.0" // Required by Nominatim for production use
+            }
+          }
+        );
+        const data = await response.json();
+
+        // Check if the response contains valid address data
+        if (!data.address) {
+          throw new Error("No address data returned");
+        }
+
+        // Extract address components
+        const { city, town, village, neighbourhood, suburb, county, state, country } = data.address;
+
+        // Build a human-readable location string
+        let area = "";
+        if (neighbourhood || suburb) {
+          area = `${neighbourhood || suburb}, ${city || town || village || county || state}`;
+        } else if (city || town || village) {
+          area = `${city || town || village}, ${country || state || county}`;
+        } else {
+          area = `${state || county || country || "Unknown location"}`;
+        }
+
+        // Fallback if no meaningful data is found
+        if (!area || area.includes("undefined")) {
+          area = "Unknown location";
+        }
+
+        // Update location state
+        setLocation(area);
         setIsLocationLoading(false);
-        
+
         toast({
           title: "Location detected",
-          description: "Your current location has been detected successfully.",
+          description: `Your current location is ${area}.`,
         });
-      },
-      (error) => {
+      } catch (error) {
         setIsLocationLoading(false);
         toast({
-          title: "Error detecting location",
-          description: `${error.message}. Please enter your location manually.`,
+          title: "Error fetching location details",
+          description: "Could not retrieve area details. Please try again or enter manually.",
           variant: "destructive",
         });
       }
-    );
-  };
+    },
+    (error) => {
+      setIsLocationLoading(false);
+      toast({
+        title: "Error detecting location",
+        description: `${error.message}. Please enter your location manually.`,
+        variant: "destructive",
+      });
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+};
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

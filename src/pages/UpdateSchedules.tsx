@@ -1,30 +1,46 @@
+
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, PlusCircle, Trash2, Calendar as CalendarIcon2 } from "lucide-react";
+import { CalendarIcon, PlusCircle, Trash2, Calendar as CalendarIcon2, LoaderCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, setHours, setMinutes, parse } from "date-fns";
 import { PickupSchedule } from "@/types/reports";
+import enuguLocations from "@/data/locations";
 
 const UpdateSchedules = () => {
   const { user } = useAuth();
   const [area, setArea] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [time, setTime] = useState("08:00"); // Default time 8:00 AM
   const [notes, setNotes] = useState("");
   const [schedules, setSchedules] = useState<PickupSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [areas, setAreas] = useState<string[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+  const [areas, setAreas] = useState<string[]>(enuguLocations);
+  
+  // Generate time options from 6:00 AM to 8:00 PM in 30-minute increments
+  const timeOptions = Array.from({ length: 29 }, (_, i) => {
+    const hour = Math.floor(i / 2) + 6;
+    const minute = i % 2 === 0 ? "00" : "30";
+    const period = hour < 12 || hour === 24 ? "AM" : "PM";
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    return {
+      value: `${hour.toString().padStart(2, "0")}:${minute}`,
+      label: `${displayHour}:${minute} ${period}`
+    };
+  });
   
   // Fetch existing schedules and unique areas
   useEffect(() => {
@@ -45,23 +61,9 @@ const UpdateSchedules = () => {
           setSchedules(schedulesData as PickupSchedule[]);
         }
         
-        // Fetch unique areas from profiles
-        const { data: areasData, error: areasError } = await supabase
-          .from('profiles')
-          .select('area')
-          .not('area', 'is', null);
-          
-        if (areasError) throw areasError;
-        
-        // Extract unique areas
-        if (areasData) {
-          const uniqueAreas = [...new Set(areasData.map(item => item.area).filter(Boolean))];
-          setAreas(uniqueAreas as string[]);
-          
-          // Set default area if none selected
-          if (!area && uniqueAreas.length > 0) {
-            setArea(uniqueAreas[0]);
-          }
+        // Set default area if none selected
+        if (!area && areas.length > 0) {
+          setArea(areas[0]);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -78,6 +80,13 @@ const UpdateSchedules = () => {
     fetchSchedules();
   }, []);
 
+  const combineDateAndTime = (date?: Date, timeStr = "00:00"): Date => {
+    if (!date) return new Date();
+    
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return setMinutes(setHours(date, hours), minutes);
+  };
+
   const handleCreateSchedule = async () => {
     if (!date || !area) {
       toast({
@@ -89,9 +98,13 @@ const UpdateSchedules = () => {
     }
     
     try {
+      setIsCreating(true);
+      
+      const combinedDateTime = combineDateAndTime(date, time);
+      
       const newSchedule = {
         area,
-        pickup_date: date.toISOString(),
+        pickup_date: combinedDateTime.toISOString(),
         notes: notes.trim() || null,
         status: "scheduled",
         created_by: user?.id
@@ -113,7 +126,7 @@ const UpdateSchedules = () => {
         
         toast({
           title: "Schedule created",
-          description: `Pickup scheduled for ${area} on ${format(date, 'PPP')}`
+          description: `Pickup scheduled for ${area} on ${format(combinedDateTime, 'PPP')} at ${format(combinedDateTime, 'h:mm a')}`
         });
       }
     } catch (error) {
@@ -123,6 +136,8 @@ const UpdateSchedules = () => {
         description: "Please try again later",
         variant: "destructive"
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -154,6 +169,8 @@ const UpdateSchedules = () => {
 
   const updateScheduleStatus = async (id: string, status: "scheduled" | "completed" | "cancelled") => {
     try {
+      setIsUpdating(prev => ({ ...prev, [id]: true }));
+      
       const { error } = await supabase
         .from('pickup_schedules')
         .update({ status })
@@ -177,6 +194,8 @@ const UpdateSchedules = () => {
         description: "Please try again later",
         variant: "destructive"
       });
+    } finally {
+      setIsUpdating(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -252,6 +271,22 @@ const UpdateSchedules = () => {
               </div>
               
               <div className="space-y-2">
+                <Label htmlFor="time">Pickup Time</Label>
+                <Select value={time} onValueChange={setTime}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
                 <Label htmlFor="notes">Notes (Optional)</Label>
                 <Textarea
                   id="notes"
@@ -264,10 +299,19 @@ const UpdateSchedules = () => {
               <Button 
                 className="w-full" 
                 onClick={handleCreateSchedule}
-                disabled={!date || !area}
+                disabled={!date || !area || isCreating}
               >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create Schedule
+                {isCreating ? (
+                  <>
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create Schedule
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -282,6 +326,7 @@ const UpdateSchedules = () => {
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-10">
+                  <LoaderCircle className="mx-auto h-8 w-8 text-waste-green animate-spin mb-2" />
                   <p>Loading schedules...</p>
                 </div>
               ) : schedules.length === 0 ? (
@@ -297,6 +342,7 @@ const UpdateSchedules = () => {
                       <TableRow>
                         <TableHead>Area</TableHead>
                         <TableHead>Date</TableHead>
+                        <TableHead>Time</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Notes</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -311,6 +357,7 @@ const UpdateSchedules = () => {
                           <TableRow key={schedule.id}>
                             <TableCell>{schedule.area}</TableCell>
                             <TableCell>{format(pickupDate, 'PP')}</TableCell>
+                            <TableCell>{format(pickupDate, 'h:mm a')}</TableCell>
                             <TableCell>
                               <Badge className={getStatusBadgeClass(schedule.status)}>
                                 {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
@@ -326,8 +373,13 @@ const UpdateSchedules = () => {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => updateScheduleStatus(schedule.id, "completed")}
+                                    disabled={isUpdating[schedule.id]}
                                   >
-                                    Mark Complete
+                                    {isUpdating[schedule.id] ? (
+                                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      "Mark Complete"
+                                    )}
                                   </Button>
                                 )}
                                 
@@ -336,8 +388,13 @@ const UpdateSchedules = () => {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => updateScheduleStatus(schedule.id, "cancelled")}
+                                    disabled={isUpdating[schedule.id]}
                                   >
-                                    Cancel
+                                    {isUpdating[schedule.id] ? (
+                                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      "Cancel"
+                                    )}
                                   </Button>
                                 )}
                                 

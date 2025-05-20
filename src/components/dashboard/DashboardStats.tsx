@@ -3,7 +3,9 @@ import { ReactNode, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpRight, Truck, AlertTriangle, Calendar, Clock, LoaderCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { supabase } from "@/integrations/supabase/client";
+import { format, parseISO } from "date-fns";
 
 interface StatsCardProps {
   title: string;
@@ -61,14 +63,18 @@ interface DashboardStatsProps {
 
 const DashboardStats = ({ userRole }: DashboardStatsProps) => {
   const { user } = useAuth();
+  const { hasCollectionToday } = useNotifications();
   const [reportsCount, setReportsCount] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [nextCollection, setNextCollection] = useState<{date: Date, time: string} | null>(null);
+  const [isLoadingReports, setIsLoadingReports] = useState<boolean>(true);
+  const [isLoadingCollection, setIsLoadingCollection] = useState<boolean>(true);
 
+  // Fetch user reports count
   useEffect(() => {
     const fetchUserReports = async () => {
       if (user && user.role === "resident") {
         try {
-          setIsLoading(true);
+          setIsLoadingReports(true);
           const { count, error } = await supabase
             .from('reports')
             .select('*', { count: 'exact', head: true })
@@ -82,7 +88,7 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
         } catch (error) {
           console.error("Error fetching reports count:", error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingReports(false);
         }
       }
     };
@@ -90,29 +96,72 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
     fetchUserReports();
   }, [user]);
 
+  // Fetch next collection schedule for user's area
+  useEffect(() => {
+    const fetchNextCollection = async () => {
+      if (user?.area) {
+        try {
+          setIsLoadingCollection(true);
+          const now = new Date().toISOString();
+          
+          const { data, error } = await supabase
+            .from('pickup_schedules')
+            .select('*')
+            .eq('area', user.area)
+            .eq('status', 'scheduled')
+            .gte('pickup_date', now)
+            .order('pickup_date', { ascending: true })
+            .limit(1) as any;
+            
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            const nextPickup = data[0];
+            const pickupDate = parseISO(nextPickup.pickup_date);
+            
+            setNextCollection({
+              date: pickupDate,
+              time: format(pickupDate, 'h:mm a')
+            });
+          } else {
+            setNextCollection(null);
+          }
+        } catch (error) {
+          console.error("Error fetching next collection:", error);
+        } finally {
+          setIsLoadingCollection(false);
+        }
+      }
+    };
+    
+    fetchNextCollection();
+  }, [user]);
+
   // Different stats based on user role
   const residentStats = [
     { 
       title: "Collection Schedule", 
-      value: "Not scheduled", 
+      value: nextCollection ? format(nextCollection.date, 'PP') : "Not scheduled", 
       description: "Next waste collection in your area", 
       icon: <Calendar className="h-5 w-5" />,
-      color: "waste-blue" 
+      color: "waste-blue",
+      isLoading: isLoadingCollection
     },
     { 
       title: "Reports Made", 
-      value: isLoading ? "..." : reportsCount, 
+      value: isLoadingReports ? "..." : reportsCount, 
       description: "Waste issues you've reported", 
       icon: <AlertTriangle className="h-5 w-5" />,
       color: "waste-yellow",
-      isLoading: isLoading
+      isLoading: isLoadingReports
     },
     { 
       title: "Next Collection", 
-      value: "N/A", 
-      description: "Scheduled time for pickup", 
+      value: nextCollection ? nextCollection.time : "N/A", 
+      description: hasCollectionToday ? "Collection scheduled today!" : "Scheduled time for pickup", 
       icon: <Clock className="h-5 w-5" />,
-      color: "waste-green" 
+      color: hasCollectionToday ? "waste-red" : "waste-green",
+      isLoading: isLoadingCollection
     },
   ];
 

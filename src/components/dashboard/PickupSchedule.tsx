@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +7,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { format } from "date-fns";
+import { format, isToday, isFuture, parseISO, compareAsc } from "date-fns";
 
 interface PickupScheduleItem {
   id: string;
@@ -48,12 +49,16 @@ const PickupSchedule = () => {
           
           // Find the next pickup for user's area if user has an area set
           if (user && user.area) {
-            const userAreaPickup = data.find((pickup: PickupScheduleItem) => 
+            const userAreaPickups = data.filter((pickup: PickupScheduleItem) => 
               pickup.area.toLowerCase() === user.area.toLowerCase()
             );
             
-            if (userAreaPickup) {
-              setNextPickupForUserArea(userAreaPickup);
+            if (userAreaPickups.length > 0) {
+              // Sort by date to get the earliest one
+              const sortedUserPickups = [...userAreaPickups].sort((a, b) => 
+                compareAsc(parseISO(a.pickup_date), parseISO(b.pickup_date))
+              );
+              setNextPickupForUserArea(sortedUserPickups[0]);
             }
           }
         }
@@ -90,6 +95,16 @@ const PickupSchedule = () => {
     }
   };
 
+  const getStatusText = (dateStr: string) => {
+    try {
+      const date = parseISO(dateStr);
+      if (isToday(date)) return "Today";
+      return isFuture(date) ? `In ${format(date, "d")} days` : "";
+    } catch (error) {
+      return "";
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -107,7 +122,15 @@ const PickupSchedule = () => {
               <div className="mb-4 p-3 border-l-4 border-waste-green bg-waste-green/5 rounded">
                 <p className="font-medium">Next collection in your area:</p>
                 <p className="text-sm text-waste-green">{nextPickupForUserArea.area}</p>
-                <p className="text-xs">{formatPickupDate(nextPickupForUserArea.pickup_date)}, {formatPickupTime(nextPickupForUserArea.pickup_date)}</p>
+                <div className="flex justify-between items-end mt-1">
+                  <div>
+                    <p className="text-xs">{formatPickupDate(nextPickupForUserArea.pickup_date)}</p>
+                    <p className="text-xs font-medium">{formatPickupTime(nextPickupForUserArea.pickup_date)}</p>
+                  </div>
+                  <span className="text-xs bg-waste-green/20 text-waste-green px-2 py-1 rounded">
+                    {getStatusText(nextPickupForUserArea.pickup_date)}
+                  </span>
+                </div>
               </div>
             )}
             
@@ -120,7 +143,11 @@ const PickupSchedule = () => {
                 {upcomingPickups.map((pickup) => (
                   <div
                     key={pickup.id}
-                    className="flex flex-col p-3 border rounded-lg"
+                    className={`flex flex-col p-3 border rounded-lg ${
+                      nextPickupForUserArea && pickup.id === nextPickupForUserArea.id 
+                        ? "border-waste-green/30 bg-waste-green/5" 
+                        : ""
+                    }`}
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <div className="bg-waste-green/10 p-2 rounded-full">
@@ -131,7 +158,7 @@ const PickupSchedule = () => {
                         <p className="text-sm text-muted-foreground">{formatPickupDate(pickup.pickup_date)}</p>
                       </div>
                     </div>
-                    <p className="text-sm">{formatPickupTime(pickup.pickup_date)}</p>
+                    <p className="text-sm font-medium">{formatPickupTime(pickup.pickup_date)}</p>
                     {pickup.notes && <p className="text-xs text-muted-foreground mt-1">{pickup.notes}</p>}
                   </div>
                 ))}

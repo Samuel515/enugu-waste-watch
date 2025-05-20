@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { MapPin, ShieldCheck } from "lucide-react";
 import { useState, useEffect } from "react";
+import enuguLocations from "@/data/locations";
 
 interface RoleAndAreaSelectorProps {
   role: UserRole;
@@ -81,18 +82,23 @@ export const RoleAndAreaSelector = ({
       {role === "resident" && (
         <div className="space-y-2">
           <Label htmlFor="area">Your Area</Label>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-            <Input
-              id="area"
-              type="text"
-              placeholder="e.g., Independence Layout"
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-              className="pl-10"
-              disabled={isLoading}
-            />
-          </div>
+          <Select
+            value={area}
+            onValueChange={(value) => setArea(value)}
+            disabled={isLoading}
+          >
+            <SelectTrigger className="w-full relative">
+              <SelectValue placeholder="Select your area" />
+              <MapPin className="absolute right-8 top-2.5 h-5 w-5 text-muted-foreground" />
+            </SelectTrigger>
+            <SelectContent>
+              {enuguLocations.map((location) => (
+                <SelectItem key={location} value={location}>
+                  {location}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
     </>

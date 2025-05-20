@@ -8,7 +8,6 @@ import { Bell } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 import { LoaderCircle } from "lucide-react";
 
 interface Notification {
@@ -22,6 +21,9 @@ interface Notification {
   for_user_id?: string;
 }
 
+// Key used for localStorage
+const READ_NOTIFICATIONS_KEY = "enugu_waste_read_notifications";
+
 const Notifications = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -30,6 +32,24 @@ const Notifications = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [localReadIds, setLocalReadIds] = useState<string[]>([]);
+  
+  // Load locally stored read notification IDs
+  useEffect(() => {
+    if (user) {
+      const storedReadIds = localStorage.getItem(`${READ_NOTIFICATIONS_KEY}_${user.id}`);
+      if (storedReadIds) {
+        try {
+          const parsedIds = JSON.parse(storedReadIds) as string[];
+          setLocalReadIds(parsedIds);
+        } catch (e) {
+          console.error("Error parsing stored read notifications:", e);
+          // Reset if there was an error
+          localStorage.removeItem(`${READ_NOTIFICATIONS_KEY}_${user.id}`);
+        }
+      }
+    }
+  }, [user]);
   
   // Fetch notifications from Supabase
   useEffect(() => {
@@ -48,16 +68,21 @@ const Notifications = () => {
         if (error) throw error;
         
         if (data) {
-          const formattedNotifications: Notification[] = data.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            message: item.message,
-            created_at: item.created_at,
-            read: item.read,
-            type: item.type,
-            read_at: item.read_at,
-            for_user_id: item.for_user_id
-          }));
+          const formattedNotifications: Notification[] = data.map((item: any) => {
+            // Apply locally tracked read status
+            const isLocallyRead = localReadIds.includes(item.id);
+            
+            return {
+              id: item.id,
+              title: item.title,
+              message: item.message,
+              created_at: item.created_at,
+              read: isLocallyRead || item.read,
+              type: item.type,
+              read_at: isLocallyRead && !item.read_at ? new Date().toISOString() : item.read_at,
+              for_user_id: item.for_user_id
+            };
+          });
           
           setNotifications(formattedNotifications);
         }
@@ -74,37 +99,42 @@ const Notifications = () => {
     };
     
     fetchNotifications();
-  }, [user, toast]);
+  }, [user, toast, localReadIds]);
+  
+  const storeLocalReadStatus = (ids: string[]) => {
+    if (!user) return;
+    
+    // Update local state
+    setLocalReadIds(prev => {
+      const newIds = [...new Set([...prev, ...ids])];
+      
+      // Store in localStorage
+      localStorage.setItem(`${READ_NOTIFICATIONS_KEY}_${user.id}`, JSON.stringify(newIds));
+      
+      return newIds;
+    });
+  };
   
   const handleMarkAllAsRead = async () => {
     if (!user) return;
     
     try {
       const unreadNotifications = notifications
-        .filter(n => !n.read && n.for_user_id === user.id)
+        .filter(n => !n.read)
         .map(n => n.id);
         
       if (unreadNotifications.length === 0) return;
       
-      const now = new Date().toISOString();
+      // Store locally
+      storeLocalReadStatus(unreadNotifications);
       
-      const { error } = await supabase
+      // Update server (in background)
+      const now = new Date().toISOString();
+      await supabase
         .from('notifications')
         .update({ read: true, read_at: now })
-        .in('id', unreadNotifications) as any;
+        .in('id', unreadNotifications);
         
-      if (error) throw error;
-      
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notification => {
-          if (!notification.read && notification.for_user_id === user.id) {
-            return { ...notification, read: true, read_at: now };
-          }
-          return notification;
-        })
-      );
-      
       toast({
         title: "Success",
         description: "All notifications marked as read"
@@ -120,28 +150,17 @@ const Notifications = () => {
   };
   
   const handleMarkAsRead = async (id: string) => {
-    if (!user) return;
+    // Update locally first
+    storeLocalReadStatus([id]);
     
+    // Update server in background
     try {
       const now = new Date().toISOString();
-      
-      const { error } = await supabase
+      await supabase
         .from('notifications')
         .update({ read: true, read_at: now })
-        .eq('id', id) as any;
-        
-      if (error) throw error;
-      
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notification => {
-          if (notification.id === id) {
-            return { ...notification, read: true, read_at: now };
-          }
-          return notification;
-        })
-      );
-    } catch (error: any) {
+        .eq('id', id);
+    } catch (error) {
       console.error('Error marking notification as read:', error);
       throw error;
     }

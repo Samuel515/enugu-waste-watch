@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
+import { LoaderCircle, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
@@ -182,7 +182,8 @@ const ManageReports = () => {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-10">
+              <div className="text-center py-10 flex justify-center items-center flex-col">
+                <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2"/>
                 <p>Loading reports...</p>
               </div>
             ) : filteredReports.length === 0 ? (

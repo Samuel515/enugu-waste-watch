@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -130,7 +129,7 @@ const ReportForm = () => {
             toast({
               title: "Location outside Enugu",
               description: "We couldn't detect a location in Enugu. Using default area.",
-              variant: "warning",
+              variant: "default",
             });
           }
 

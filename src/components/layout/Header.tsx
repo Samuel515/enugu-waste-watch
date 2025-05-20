@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,13 +12,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Menu, X, Bell, LogOut, Settings, User } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 
 const Header = () => {
-  const isMobile = useIsMobile();
+  const { isMobile } = useMobile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
@@ -227,7 +228,7 @@ const Header = () => {
         )}
 
         {/* Auth buttons or User menu */}
-        <div className={`flex items-center gap-2 ${isMobile ? 'hidden' : ''}`}>
+        <div className="flex items-center gap-2">
           {user ? (
             <>
               {!isMobile && (
@@ -249,6 +250,7 @@ const Header = () => {
                     className="relative h-8 w-8 rounded-full"
                   >
                     <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatar} alt={user.name} />
                       <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                     </Avatar>
                   </Button>

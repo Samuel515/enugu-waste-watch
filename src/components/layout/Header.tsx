@@ -227,7 +227,7 @@ const Header = () => {
         )}
 
         {/* Auth buttons or User menu */}
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${isMobile ? 'hidden' : ''}`}>
           {user ? (
             <>
               {!isMobile && (

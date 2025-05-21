@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, MapPin } from "lucide-react";
 
 interface RecentReportsProps {
   userRole: string;
@@ -102,8 +102,9 @@ const RecentReports: React.FC<RecentReportsProps> = ({ userRole }) => {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{report.id}</p>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {report.location} · {new Date(report.created_at).toLocaleDateString()}
+                    <div className="text-xs text-muted-foreground mt-1 flex justify-left items-center gap-1">
+                      <MapPin className="inline -left-10 max-h-4 max-w-max text-muted-foreground"/>
+                      <p>{report.location} · {new Date(report.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
                   {(userRole === "official" || userRole === "admin") && (

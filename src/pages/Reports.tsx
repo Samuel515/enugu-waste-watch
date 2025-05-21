@@ -11,6 +11,7 @@ import { LoaderCircle, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { MapPin } from "lucide-react";
 
 interface Report {
   id: string;
@@ -154,9 +155,10 @@ const Reports = () => {
                       </div>
                       <p className="text-sm text-muted-foreground">{report.id}</p>
                       <p className="text-sm mt-1">{report.description}</p>
-                      <div className="text-xs text-muted-foreground mt-2">
-                        {report.location} · {new Date(report.created_at).toLocaleDateString()}
-                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 flex justify-left items-center gap-1">
+                      <MapPin className="inline -left-10 max-h-4 max-w-max text-muted-foreground"/>
+                      <p>{report.location} · {new Date(report.created_at).toLocaleDateString()}</p>
+                    </div>
                     </div>
                     {(user?.role === "official" || user?.role === "admin") && (
                       <Link

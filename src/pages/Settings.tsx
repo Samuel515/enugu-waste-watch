@@ -6,11 +6,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { Lock, Mail, Bell, Shield, AlertTriangle, LoaderCircle } from "lucide-react";
+import {
+  Lock,
+  Mail,
+  Bell,
+  Shield,
+  AlertTriangle,
+  LoaderCircle,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,69 +37,73 @@ import {
 const Settings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const [emailNotifications, setEmailNotifications] = useState({
     reportUpdates: true,
     collectionReminders: true,
-    systemAnnouncements: false,
-    tips: true
+    systemAnnouncements: true,
+    tips: true,
   });
-  
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (newPassword !== confirmPassword) {
       toast({
         title: "Passwords don't match",
-        description: "Your new password and confirmation password do not match.",
+        description:
+          "Your new password and confirmation password do not match.",
         variant: "destructive",
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+
       // Reset form
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      
+
       toast({
         title: "Password updated",
-        description: "Your password has been updated successfully."
+        description: "Your password has been updated successfully.",
       });
     } catch (error) {
       toast({
         title: "Password update failed",
-        description: "An error occurred while updating your password. Please try again.",
+        description:
+          "An error occurred while updating your password. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const handleNotificationSettingChange = (key: keyof typeof emailNotifications) => {
-    setEmailNotifications(prev => ({
+
+  const handleNotificationSettingChange = (
+    key: keyof typeof emailNotifications
+  ) => {
+    setEmailNotifications((prev) => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: !prev[key],
     }));
-    
+
     toast({
       title: "Notification settings updated",
-      description: "Your notification preferences have been saved."
+      description: "Your notification preferences have been saved.",
     });
   };
-  
+
   return (
     <Layout requireAuth>
       <div className="container py-8 max-w-3xl">
@@ -93,10 +111,13 @@ const Settings = () => {
         <p className="text-muted-foreground mb-8">
           Manage your account settings and preferences
         </p>
-        
+
         <Tabs defaultValue="password" className="space-y-8">
           <TabsList className="w-full flex-wrap h-auto py-1 md:h-10">
-            <TabsTrigger value="password" className="flex-1 data-[state=active]:bg-primary">
+            <TabsTrigger
+              value="password"
+              className="flex-1 data-[state=active]:bg-primary"
+            >
               <span className="flex items-center gap-1">
                 <Lock className="h-4 w-4" />
                 <span>Password</span>
@@ -115,7 +136,7 @@ const Settings = () => {
               </span>
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="password">
             <Card>
               <CardHeader>
@@ -137,7 +158,7 @@ const Settings = () => {
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="new-password">New Password</Label>
                     <Input
@@ -149,9 +170,11 @@ const Settings = () => {
                       required
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                    <Label htmlFor="confirm-password">
+                      Confirm New Password
+                    </Label>
                     <Input
                       id="confirm-password"
                       type="password"
@@ -169,14 +192,16 @@ const Settings = () => {
                         <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                         Updating...
                       </>
-                    ) : "Update Password"}
+                    ) : (
+                      "Update Password"
+                    )}
                   </Button>
                 </CardFooter>
               </form>
             </Card>
           </TabsContent>
-          
-          <TabsContent value="notifications">
+
+          <TabsContent value="notifications" className="relative">
             <Card>
               <CardHeader>
                 <CardTitle>Notification Preferences</CardTitle>
@@ -195,15 +220,19 @@ const Settings = () => {
                   <Switch
                     id="report-updates"
                     checked={emailNotifications.reportUpdates}
-                    onCheckedChange={() => handleNotificationSettingChange("reportUpdates")}
+                    onCheckedChange={() =>
+                      handleNotificationSettingChange("reportUpdates")
+                    }
                   />
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label htmlFor="collection-reminders">Collection Reminders</Label>
+                    <Label htmlFor="collection-reminders">
+                      Collection Reminders
+                    </Label>
                     <p className="text-sm text-muted-foreground">
                       Receive reminders about upcoming waste collections
                     </p>
@@ -211,15 +240,19 @@ const Settings = () => {
                   <Switch
                     id="collection-reminders"
                     checked={emailNotifications.collectionReminders}
-                    onCheckedChange={() => handleNotificationSettingChange("collectionReminders")}
+                    onCheckedChange={() =>
+                      handleNotificationSettingChange("collectionReminders")
+                    }
                   />
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label htmlFor="system-announcements">System Announcements</Label>
+                    <Label htmlFor="system-announcements">
+                      System Announcements
+                    </Label>
                     <p className="text-sm text-muted-foreground">
                       Receive important system updates and announcements
                     </p>
@@ -227,12 +260,14 @@ const Settings = () => {
                   <Switch
                     id="system-announcements"
                     checked={emailNotifications.systemAnnouncements}
-                    onCheckedChange={() => handleNotificationSettingChange("systemAnnouncements")}
+                    onCheckedChange={() =>
+                      handleNotificationSettingChange("systemAnnouncements")
+                    }
                   />
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="flex items-center justify-between">
                   <div>
                     <Label htmlFor="tips">Tips & Resources</Label>
@@ -243,13 +278,27 @@ const Settings = () => {
                   <Switch
                     id="tips"
                     checked={emailNotifications.tips}
-                    onCheckedChange={() => handleNotificationSettingChange("tips")}
+                    onCheckedChange={() =>
+                      handleNotificationSettingChange("tips")
+                    }
                   />
                 </div>
               </CardContent>
             </Card>
+            {/* Transparent overlay for "coming soon" */}
+            <div
+              className="absolute inset-0 bg-white/15 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-lg"
+              style={{ pointerEvents: "auto" }}
+            >
+              <span className="text-lg font-semibold text-gray-700 text-center">
+                <span className="block">Coming Soon!</span>
+                <span className="text-sm text-muted-foreground">
+                  This feature is under development.
+                </span>
+              </span>
+            </div>
           </TabsContent>
-          
+
           <TabsContent value="security">
             <Card>
               <CardHeader>
@@ -261,16 +310,6 @@ const Settings = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex flex-col space-y-3">
-                    <h3 className="text-lg font-medium">Session Management</h3>
-                    <p className="text-sm text-muted-foreground">
-                      View and manage your active sessions across different devices.
-                    </p>
-                    <Button variant="outline">Manage Sessions</Button>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="flex flex-col space-y-3">
                     <h3 className="text-lg font-medium text-destructive flex items-center gap-2">
                       <AlertTriangle className="h-5 w-5" />
                       Delete Account
@@ -281,7 +320,9 @@ const Settings = () => {
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="destructive">
-                          <span className="md:inline">Please contact support to delete your account</span>
+                          <span className="md:inline">
+                            Please contact support to delete your account
+                          </span>
                           <span className="md:hidden">Contact support</span>
                         </Button>
                       </DialogTrigger>
@@ -289,12 +330,16 @@ const Settings = () => {
                         <DialogHeader>
                           <DialogTitle>Contact Support</DialogTitle>
                           <DialogDescription>
-                            Please contact our support team to delete your account. All your data will be permanently removed.
+                            Please contact our support team to delete your
+                            account. All your data will be permanently removed.
                           </DialogDescription>
                         </DialogHeader>
                         <div className="flex justify-center py-4">
                           <Button asChild>
-                            <a href="mailto:support@enuguwaste.com" className="flex items-center gap-2">
+                            <a
+                              href="mailto:support@enuguwaste.com"
+                              className="flex items-center gap-2"
+                            >
                               <Mail className="h-4 w-4" />
                               Email Support
                             </a>

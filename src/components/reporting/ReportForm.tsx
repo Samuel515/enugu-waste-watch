@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,8 +12,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, MapPin, Upload, Trash2, AlertTriangle, CircleAlert, TriangleAlert, Loader2 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Camera,
+  MapPin,
+  Upload,
+  Trash2,
+  AlertTriangle,
+  CircleAlert,
+  TriangleAlert,
+  Loader2,
+} from "lucide-react";
 import ImageUpload from "@/components/reporting/ImageUpload";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -48,16 +63,35 @@ const WASTE_TYPES = [
 
 // List of recognized areas in Enugu state
 const ENUGU_AREAS = [
-  "Ogbete", "Agbani", "Trans-Ekulu", "Akpugo", "GRA", "ShopRite", "Independence Layout",
-  "New Haven", "Uwani", "Coal Camp", "Abakpa", "Emene", "Ngwo", "Maryland", "Obiagu",
-  "Ogui", "Asata", "Rangers", "Achara Layout", "Gariki", "9th Mile", "Nike"
+  "Ogbete",
+  "Agbani",
+  "Trans-Ekulu",
+  "Akpugo",
+  "GRA",
+  "ShopRite",
+  "Independence Layout",
+  "New Haven",
+  "Uwani",
+  "Coal Camp",
+  "Abakpa",
+  "Emene",
+  "Ngwo",
+  "Maryland",
+  "Obiagu",
+  "Ogui",
+  "Asata",
+  "Rangers",
+  "Achara Layout",
+  "Gariki",
+  "9th Mile",
+  "Nike",
 ];
 
 const ReportForm = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState(user?.area || "");
@@ -67,7 +101,7 @@ const ReportForm = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!user) {
       toast({
         title: "Authentication required",
@@ -76,7 +110,7 @@ const ReportForm = () => {
       });
       return;
     }
-    
+
     // Validation
     if (!title || !description || !location || !wasteType) {
       toast({
@@ -86,61 +120,64 @@ const ReportForm = () => {
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Generate a report ID with format WR-YYYY-MM-DD-XXX
       const date = new Date();
-      const reportId = `WR-${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-      
+      const reportId = `WR-${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
       // Submit the report to Supabase
-      const { data, error } = await supabase
-        .from('reports')
+      const { data, error } = (await supabase
+        .from("reports")
         .insert({
           title,
           description,
           location,
-          status: 'pending',
+          status: "pending",
           user_id: user.id,
           user_name: user.name,
           user_area: user.area,
-          image_url: images.length > 0 ? images[0] : null
+          image_url: images.length > 0 ? images[0] : null,
         })
-        .select() as any;
-        
+        .select()) as any;
+
       if (error) throw error;
-      
+
       // Create a notification for officials/admins about this new report
-      await supabase
-        .from('notifications')
-        .insert({
-          title: 'New Waste Report Submitted',
-          message: `A new waste report "${title}" has been submitted in ${location}`,
-          type: 'report',
-          for_all: true,
-          created_by: user.id
-        }) as any;
-      
+      (await supabase.from("notifications").insert({
+        title: "New Waste Report Submitted",
+        message: `A new waste report "${title}" has been submitted in ${location}`,
+        type: "report",
+        for_all: true,
+        created_by: user.id,
+      })) as any;
+
       toast({
         title: "Report submitted successfully",
-        description: "Your waste report has been received and will be processed.",
+        description:
+          "Your waste report has been received and will be processed.",
       });
-      
+
       // Reset form
       setTitle("");
       setDescription("");
       setLocation(user?.area || "");
       setWasteType("");
       setImages([]);
-      
+
       // Redirect to the reports page
-      navigate('/reports');
+      navigate("/reports");
     } catch (error: any) {
       console.error("Error submitting report:", error);
       toast({
         title: "Failed to submit report",
-        description: error.message || "There was an error submitting your report. Please try again.",
+        description:
+          error.message ||
+          "There was an error submitting your report. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -168,10 +205,14 @@ const ReportForm = () => {
               disabled={isLoading}
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="type">Waste Issue Type</Label>
-            <Select value={wasteType} onValueChange={setWasteType} disabled={isLoading}>
+            <Select
+              value={wasteType}
+              onValueChange={setWasteType}
+              disabled={isLoading}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select issue type" />
               </SelectTrigger>
@@ -189,7 +230,7 @@ const ReportForm = () => {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
@@ -201,39 +242,37 @@ const ReportForm = () => {
               disabled={isLoading}
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Select value={location} onValueChange={setLocation} disabled={isLoading}>
-              <SelectTrigger id="location">
-                <SelectValue placeholder="Select area in Enugu" />
-              </SelectTrigger>
-              <SelectContent>
-                {ENUGU_AREAS.map((area) => (
-                  <SelectItem key={area} value={area}>
-                    {area}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Photos (Optional)</Label>
-            <ImageUpload 
-              images={images} 
-              setImages={setImages} 
-              disabled={isLoading} 
+            <Label htmlFor="location" className="flex items-center gap-1">
+              Location
+            </Label>
+            <Input
+              id="location"
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Enter a detailed location of the issue"
+              disabled={isLoading}
             />
           </div>
-          
+
+          <div className="space-y-2">
+            <Label>Photos (Optional)</Label>
+            <ImageUpload
+              images={images}
+              setImages={setImages}
+              disabled={isLoading}
+            />
+          </div>
+
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Submitting...
               </>
-            ) : "Submit Report"}
+            ) : (
+              "Submit Report"
+            )}
           </Button>
         </form>
       </CardContent>

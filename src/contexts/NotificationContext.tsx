@@ -71,6 +71,60 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Function to check for upcoming collections (less than a day away)
+  const checkUpcomingCollections = async () => {
+    if (!user?.area) return;
+
+    try {
+      const now = new Date();
+      const oneDayLater = new Date(now);
+      oneDayLater.setDate(oneDayLater.getDate() + 1);
+      
+      const { data } = await supabase
+        .from('pickup_schedules')
+        .select('*')
+        .eq('area', user.area)
+        .eq('status', 'scheduled')
+        .gte('pickup_date', now.toISOString())
+        .lt('pickup_date', oneDayLater.toISOString())
+        .order('pickup_date', { ascending: true })
+        .limit(1) as any;
+      
+      if (data && data.length > 0) {
+        // Create a notification for upcoming collection
+        const pickupDate = new Date(data[0].pickup_date);
+        const formattedDate = pickupDate.toLocaleDateString('en-US', { 
+          weekday: 'long',
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        // Check if we've already created a notification for this collection
+        const collectionKey = `upcoming_collection_${data[0].id}`;
+        const notificationCreated = localStorage.getItem(collectionKey);
+        
+        if (!notificationCreated) {
+          // Create a notification
+          await supabase.from('notifications').insert({
+            title: "Upcoming Waste Collection",
+            message: `A waste collection is scheduled for your area (${user.area}) on ${formattedDate}. Please ensure your waste is properly sorted and ready for collection.`,
+            type: "collection",
+            for_user_id: user.id,
+            created_by: null,
+            for_all: false
+          });
+          
+          // Mark as created in localStorage to prevent duplicate notifications
+          localStorage.setItem(collectionKey, 'true');
+        }
+      }
+    } catch (error) {
+      console.error("Error checking upcoming collections:", error);
+    }
+  };
+
   // Refresh notifications count and check collections
   const refreshNotifications = async () => {
     if (!user) return;
@@ -95,6 +149,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       // Check for today's collections
       const hasTodayCollection = await checkTodayCollection();
       setHasCollectionToday(hasTodayCollection);
+      
+      // Check for upcoming collections (less than a day away)
+      await checkUpcomingCollections();
     } catch (error) {
       console.error("Error refreshing notifications:", error);
     }

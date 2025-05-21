@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Mail, MapPin, LoaderCircle } from "lucide-react";
+import enuguLocations from "@/data/locations";
 
 const Profile = () => {
   const { user, isAuthenticated } = useAuth();
@@ -17,6 +18,7 @@ const Profile = () => {
   
   const [name, setName] = useState(user?.name || "");
   const [area, setArea] = useState(user?.area || "");
+  const [email, setEmail] = useState(user?.email || "");
   const [isLoading, setIsLoading] = useState(false);
   
   // Update form values when user data changes
@@ -24,6 +26,7 @@ const Profile = () => {
     if (user) {
       setName(user.name || "");
       setArea(user.area || "");
+      setEmail(user.email || "");
     }
   }, [user]);
   
@@ -107,7 +110,7 @@ const Profile = () => {
                   <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input 
                     id="email"
-                    value={user.email}
+                    value={email}
                     className="pl-10"
                     disabled
                     readOnly
@@ -141,17 +144,22 @@ const Profile = () => {
               {user.role === "resident" && (
                 <div className="space-y-2">
                   <Label htmlFor="area">Your Area</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                    <Input 
-                      id="area"
-                      value={area}
-                      onChange={(e) => setArea(e.target.value)}
-                      className="pl-10"
-                      placeholder="e.g., Independence Layout"
-                      disabled={isLoading}
-                    />
-                  </div>
+                  <Select
+                    value={area}
+                    onValueChange={setArea}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select your area" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {enuguLocations.map((location) => (
+                        <SelectItem key={location} value={location}>
+                          {location}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
               

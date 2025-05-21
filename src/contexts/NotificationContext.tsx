@@ -129,6 +129,38 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Set up a listener for new reports to create notifications
+  useEffect(() => {
+    if (!user) return;
+
+    // Subscribe to new reports
+    const channel = supabase
+      .channel('report-changes')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'reports' }, 
+        async (payload) => {
+          const newReport = payload.new;
+          
+          // Create a notification for all users
+          try {
+            await supabase.from('notifications').insert({
+              title: "New Waste Report Submitted",
+              message: `A new waste report has been submitted at ${newReport.location}: "${newReport.title}"`,
+              type: "report",
+              for_all: true,
+              created_by: newReport.user_id
+            });
+          } catch (error) {
+            console.error("Error creating report notification:", error);
+          }
+        })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   // Refresh notifications count and check collections
   const refreshNotifications = async () => {
     if (!user) return;

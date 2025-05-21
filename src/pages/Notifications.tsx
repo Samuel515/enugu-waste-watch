@@ -131,9 +131,7 @@ const Notifications = () => {
       }
     };
     
-    if (activeTab === "collection") {
-      fetchUpcomingCollections();
-    }
+    fetchUpcomingCollections();
   }, [user, activeTab]);
   
   const storeLocalReadStatus = (ids: string[]) => {
@@ -235,6 +233,14 @@ const Notifications = () => {
     };
   });
 
+  // This is a placeholder function to handle the static collection notifications
+  // It returns a Promise to match the expected type for the onMarkAsRead prop
+  const handleCollectionNotification = async (id: string): Promise<void> => {
+    // This is intentionally empty as these are dynamically generated notifications
+    // that don't need to be marked as read in the database
+    return Promise.resolve();
+  };
+
   return (
     <Layout requireAuth>
       <div className="container py-8">
@@ -288,13 +294,25 @@ const Notifications = () => {
                 </div>
               </div>
             ) : (
-              <NotificationList 
-                notifications={filteredNotifications.map(n => ({
-                  ...n,
-                  timestamp: n.created_at
-                }))} 
-                onMarkAsRead={handleMarkAsRead}
-              />
+              <>
+                {/* Show upcoming collections in All tab too */}
+                {collectionNotifications.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-lg font-medium mb-2">Upcoming Collections (Next 24 Hours)</h3>
+                    <NotificationList 
+                      notifications={collectionNotifications}
+                      onMarkAsRead={handleCollectionNotification}
+                    />
+                  </div>
+                )}
+                <NotificationList 
+                  notifications={filteredNotifications.map(n => ({
+                    ...n,
+                    timestamp: n.created_at
+                  }))} 
+                  onMarkAsRead={handleMarkAsRead}
+                />
+              </>
             )}
           </TabsContent>
           
@@ -307,7 +325,7 @@ const Notifications = () => {
                     <h3 className="text-lg font-medium mb-2">Upcoming Collections</h3>
                     <NotificationList 
                       notifications={collectionNotifications}
-                      onMarkAsRead={async () => {}}
+                      onMarkAsRead={handleCollectionNotification}
                     />
                   </div>
                 )}

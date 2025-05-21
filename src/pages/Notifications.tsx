@@ -298,7 +298,7 @@ const Notifications = () => {
                 {/* Show upcoming collections in All tab too */}
                 {collectionNotifications.length > 0 && (
                   <div className="mb-4">
-                    <h3 className="text-lg font-medium mb-2">Upcoming Collections (Next 24 Hours)</h3>
+                    <h3 className="text-lg font-medium mb-2">Upcoming Collections</h3>
                     <NotificationList 
                       notifications={collectionNotifications}
                       onMarkAsRead={handleCollectionNotification}

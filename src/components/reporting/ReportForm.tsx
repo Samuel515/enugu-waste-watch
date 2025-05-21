@@ -203,6 +203,7 @@ const ReportForm = () => {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Brief description of the issue"
               disabled={isLoading}
+              required
             />
           </div>
 
@@ -212,6 +213,7 @@ const ReportForm = () => {
               value={wasteType}
               onValueChange={setWasteType}
               disabled={isLoading}
+              required
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select issue type" />
@@ -252,6 +254,7 @@ const ReportForm = () => {
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Enter a detailed location of the issue"
               disabled={isLoading}
+              required
             />
           </div>
 

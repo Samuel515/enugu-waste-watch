@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,6 @@ import {
 import ImageUpload from "@/components/reporting/ImageUpload";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import enuguLocations from "@/data/locations";
 
 const WASTE_TYPES = [
   {
@@ -61,6 +59,32 @@ const WASTE_TYPES = [
     description: "Waste bin that needs repair or replacement",
     icon: <TriangleAlert className="h-4 w-4" />,
   },
+];
+
+// List of recognized areas in Enugu state
+const ENUGU_AREAS = [
+  "Ogbete",
+  "Agbani",
+  "Trans-Ekulu",
+  "Akpugo",
+  "GRA",
+  "ShopRite",
+  "Independence Layout",
+  "New Haven",
+  "Uwani",
+  "Coal Camp",
+  "Abakpa",
+  "Emene",
+  "Ngwo",
+  "Maryland",
+  "Obiagu",
+  "Ogui",
+  "Asata",
+  "Rangers",
+  "Achara Layout",
+  "Gariki",
+  "9th Mile",
+  "Nike",
 ];
 
 const ReportForm = () => {
@@ -107,7 +131,7 @@ const ReportForm = () => {
       ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
       // Submit the report to Supabase
-      const { data, error } = await supabase
+      const { data, error } = (await supabase
         .from("reports")
         .insert({
           title,
@@ -119,27 +143,18 @@ const ReportForm = () => {
           user_area: user.area,
           image_url: images.length > 0 ? images[0] : null,
         })
-        .select() as any;
+        .select()) as any;
 
       if (error) throw error;
 
       // Create a notification for officials/admins about this new report
-      await supabase.from("notifications").insert({
+      (await supabase.from("notifications").insert({
         title: "New Waste Report Submitted",
         message: `A new waste report "${title}" has been submitted in ${location}`,
         type: "report",
         for_all: true,
         created_by: user.id,
-      }) as any;
-
-      // Create a confirmation notification for the user who submitted the report
-      await supabase.from("notifications").insert({
-        title: "Report Submitted Successfully",
-        message: `Your report "${title}" has been submitted and is pending review.`,
-        type: "report",
-        for_user_id: user.id,
-        created_by: null,
-      }) as any;
+      })) as any;
 
       toast({
         title: "Report submitted successfully",
@@ -229,23 +244,15 @@ const ReportForm = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Select
-              value={location}
-              onValueChange={setLocation}
+            <Label htmlFor="location" className="flex items-center gap-1">
+              Location
+            </Label>
+            <Input
+              id="location"
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Enter a detailed location of the issue"
               disabled={isLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select area" />
-              </SelectTrigger>
-              <SelectContent>
-                {enuguLocations.map((area) => (
-                  <SelectItem key={area} value={area}>
-                    {area}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="space-y-2">

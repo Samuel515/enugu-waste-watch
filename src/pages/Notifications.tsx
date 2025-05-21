@@ -307,7 +307,7 @@ const Notifications = () => {
                     <h3 className="text-lg font-medium mb-2">Upcoming Collections (Next 24 Hours)</h3>
                     <NotificationList 
                       notifications={collectionNotifications}
-                      onMarkAsRead={() => {}}
+                      onMarkAsRead={async () => {}}
                     />
                   </div>
                 )}

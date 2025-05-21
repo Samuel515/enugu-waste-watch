@@ -33,6 +33,7 @@ const Notifications = () => {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [localReadIds, setLocalReadIds] = useState<string[]>([]);
+  const [upcomingCollections, setUpcomingCollections] = useState<any[]>([]);
   
   // Load locally stored read notification IDs
   useEffect(() => {
@@ -63,7 +64,7 @@ const Notifications = () => {
           .from('notifications')
           .select('*')
           .or(`for_user_id.eq.${user.id},for_all.eq.true`)
-          .order('created_at', { ascending: false }) as any;
+          .order('created_at', { ascending: false });
           
         if (error) throw error;
         
@@ -100,6 +101,40 @@ const Notifications = () => {
     
     fetchNotifications();
   }, [user, toast, localReadIds]);
+
+  // Fetch upcoming collections separately
+  useEffect(() => {
+    const fetchUpcomingCollections = async () => {
+      if (!user?.area) return;
+      
+      try {
+        const now = new Date();
+        const oneDayLater = new Date(now);
+        oneDayLater.setDate(oneDayLater.getDate() + 1);
+        
+        const { data, error } = await supabase
+          .from('pickup_schedules')
+          .select('*')
+          .eq('area', user.area)
+          .eq('status', 'scheduled')
+          .gte('pickup_date', now.toISOString())
+          .lt('pickup_date', oneDayLater.toISOString())
+          .order('pickup_date', { ascending: true });
+          
+        if (error) throw error;
+        
+        if (data) {
+          setUpcomingCollections(data);
+        }
+      } catch (error) {
+        console.error('Error fetching upcoming collections:', error);
+      }
+    };
+    
+    if (activeTab === "collection") {
+      fetchUpcomingCollections();
+    }
+  }, [user, activeTab]);
   
   const storeLocalReadStatus = (ids: string[]) => {
     if (!user) return;
@@ -178,6 +213,28 @@ const Notifications = () => {
   
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // Generate collection notifications
+  const collectionNotifications = upcomingCollections.map(collection => {
+    const pickupDate = new Date(collection.pickup_date);
+    const formattedDate = pickupDate.toLocaleDateString('en-US', { 
+      weekday: 'long',
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    return {
+      id: collection.id,
+      title: "Upcoming Waste Collection",
+      message: `A waste collection is scheduled for your area (${user?.area}) on ${formattedDate}. Please ensure your waste is properly sorted and ready for collection.`,
+      timestamp: collection.created_at,
+      read: false,
+      type: "collection" as const,
+      read_at: null
+    };
+  });
+
   return (
     <Layout requireAuth>
       <div className="container py-8">
@@ -242,13 +299,30 @@ const Notifications = () => {
           </TabsContent>
           
           <TabsContent value="collection">
-            <NotificationList 
-              notifications={filteredNotifications.map(n => ({
-                ...n,
-                timestamp: n.created_at
-              }))} 
-              onMarkAsRead={handleMarkAsRead}
-            />
+            {activeTab === "collection" && (
+              <>
+                {/* Display upcoming collections at the top */}
+                {collectionNotifications.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-lg font-medium mb-2">Upcoming Collections (Next 24 Hours)</h3>
+                    <NotificationList 
+                      notifications={collectionNotifications}
+                      onMarkAsRead={() => {}}
+                    />
+                  </div>
+                )}
+                
+                {/* Display regular collection notifications */}
+                <NotificationList 
+                  notifications={filteredNotifications.map(n => ({
+                    ...n,
+                    timestamp: n.created_at
+                  }))}
+                  onMarkAsRead={handleMarkAsRead}
+                  isLoading={isLoading && filteredNotifications.length === 0}
+                />
+              </>
+            )}
           </TabsContent>
           
           <TabsContent value="report">

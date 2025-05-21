@@ -62,7 +62,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         .eq('status', 'scheduled')
         .gte('pickup_date', today.toISOString())
         .lt('pickup_date', tomorrow.toISOString())
-        .limit(1) as any;
+        .limit(1);
 
       return data && data.length > 0;
     } catch (error) {
@@ -88,7 +88,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         .gte('pickup_date', now.toISOString())
         .lt('pickup_date', oneDayLater.toISOString())
         .order('pickup_date', { ascending: true })
-        .limit(1) as any;
+        .limit(1);
       
       if (data && data.length > 0) {
         // Create a notification for upcoming collection
@@ -107,7 +107,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         
         if (!notificationCreated) {
           // Create a notification
-          await supabase.from('notifications').insert({
+          const { error } = await supabase.from('notifications').insert({
             title: "Upcoming Waste Collection",
             message: `A waste collection is scheduled for your area (${user.area}) on ${formattedDate}. Please ensure your waste is properly sorted and ready for collection.`,
             type: "collection",
@@ -116,8 +116,12 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
             for_all: false
           });
           
-          // Mark as created in localStorage to prevent duplicate notifications
-          localStorage.setItem(collectionKey, 'true');
+          if (error) {
+            console.error("Error creating collection notification:", error);
+          } else {
+            // Mark as created in localStorage to prevent duplicate notifications
+            localStorage.setItem(collectionKey, 'true');
+          }
         }
       }
     } catch (error) {
@@ -135,7 +139,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         .from('notifications')
         .select('id')
         .or(`for_user_id.eq.${user.id},for_all.eq.true`)
-        .eq('read', false) as any;
+        .eq('read', false);
         
       if (error) throw error;
       
@@ -159,23 +163,25 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   // Refresh notifications on mount and when user or local read IDs change
   useEffect(() => {
-    refreshNotifications();
-    
-    // Set up a subscription for real-time updates
-    const channel = supabase
-      .channel('notification-changes')
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'notifications' },
-        () => refreshNotifications())
-      .subscribe();
+    if (user) {
+      refreshNotifications();
       
-    // Refresh every 5 minutes
-    const intervalId = setInterval(refreshNotifications, 5 * 60 * 1000);
-    
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(intervalId);
-    };
+      // Set up a subscription for real-time updates
+      const channel = supabase
+        .channel('notification-changes')
+        .on('postgres_changes', 
+          { event: 'INSERT', schema: 'public', table: 'notifications' },
+          () => refreshNotifications())
+        .subscribe();
+        
+      // Refresh every 5 minutes
+      const intervalId = setInterval(refreshNotifications, 5 * 60 * 1000);
+      
+      return () => {
+        supabase.removeChannel(channel);
+        clearInterval(intervalId);
+      };
+    }
   }, [user, localReadIds]);
 
   return (

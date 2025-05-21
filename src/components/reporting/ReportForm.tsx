@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -148,13 +149,17 @@ const ReportForm = () => {
       if (error) throw error;
 
       // Create a notification for officials/admins about this new report
-      (await supabase.from("notifications").insert({
+      const { error: notificationError } = await supabase.from("notifications").insert({
         title: "New Waste Report Submitted",
         message: `A new waste report "${title}" has been submitted in ${location}`,
         type: "report",
         for_all: true,
         created_by: user.id,
-      })) as any;
+      });
+      
+      if (notificationError) {
+        console.error("Error creating notification:", notificationError);
+      }
 
       toast({
         title: "Report submitted successfully",
@@ -249,6 +254,7 @@ const ReportForm = () => {
             </Label>
             <Input
               id="location"
+              value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Enter a detailed location of the issue"
               disabled={isLoading}

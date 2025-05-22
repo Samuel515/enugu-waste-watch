@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -132,6 +131,7 @@ const ReportForm = () => {
       ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
       // Submit the report to Supabase
+      // The notification will be created automatically via database trigger
       const { data, error } = (await supabase
         .from("reports")
         .insert({
@@ -147,20 +147,7 @@ const ReportForm = () => {
         .select()) as any;
 
       if (error) throw error;
-
-      // Create a notification for officials/admins about this new report
-      const { error: notificationError } = await supabase.from("notifications").insert({
-        title: "New Waste Report Submitted",
-        message: `A new waste report "${title}" has been submitted in ${location}`,
-        type: "report",
-        for_all: true,
-        created_by: user.id,
-      });
       
-      if (notificationError) {
-        console.error("Error creating notification:", notificationError);
-      }
-
       toast({
         title: "Report submitted successfully",
         description:

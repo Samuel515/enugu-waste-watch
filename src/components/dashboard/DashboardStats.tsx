@@ -68,6 +68,12 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
   const [nextCollection, setNextCollection] = useState<{date: Date, time: string} | null>(null);
   const [isLoadingReports, setIsLoadingReports] = useState<boolean>(true);
   const [isLoadingCollection, setIsLoadingCollection] = useState<boolean>(true);
+  
+  // Official dashboard stats
+  const [activeReportsCount, setActiveReportsCount] = useState<number>(0);
+  const [collectionsToday, setCollectionsToday] = useState<number>(0);
+  const [areasCovered, setAreasCovered] = useState<number>(0);
+  const [isLoadingOfficialStats, setIsLoadingOfficialStats] = useState<boolean>(true);
 
   // Fetch user reports count
   useEffect(() => {
@@ -136,6 +142,82 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
     
     fetchNextCollection();
   }, [user]);
+  
+  // Fetch official dashboard stats
+  useEffect(() => {
+    const fetchOfficialStats = async () => {
+      if (user && (user.role === "official" || user.role === "admin")) {
+        setIsLoadingOfficialStats(true);
+        
+        try {
+          // 1. Fetch active reports count (pending or in-progress)
+          const { count: activeCount, error: reportsError } = await supabase
+            .from('reports')
+            .select('*', { count: 'exact', head: true })
+            .in('status', ['pending', 'in-progress']);
+          
+          if (reportsError) throw reportsError;
+          setActiveReportsCount(activeCount || 0);
+          
+          // 2. Fetch collections scheduled for today
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          
+          const { count: collectionsCount, error: collectionsError } = await supabase
+            .from('pickup_schedules')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'scheduled')
+            .gte('pickup_date', today.toISOString())
+            .lt('pickup_date', tomorrow.toISOString());
+          
+          if (collectionsError) throw collectionsError;
+          setCollectionsToday(collectionsCount || 0);
+          
+          // 3. Fetch completed collections for today (for areas covered)
+          const { count: areasCount, error: areasError } = await supabase
+            .from('pickup_schedules')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'completed')
+            .gte('pickup_date', today.toISOString())
+            .lt('pickup_date', tomorrow.toISOString());
+          
+          if (areasError) throw areasError;
+          setAreasCovered(areasCount || 0);
+          
+        } catch (error) {
+          console.error("Error fetching official stats:", error);
+        } finally {
+          setIsLoadingOfficialStats(false);
+        }
+      }
+    };
+    
+    if (userRole === "official" || userRole === "admin") {
+      fetchOfficialStats();
+      
+      // Set up real-time subscriptions for dashboard stats
+      const reportsChannel = supabase
+        .channel('reports-changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'reports' },
+          () => fetchOfficialStats())
+        .subscribe();
+        
+      const schedulesChannel = supabase
+        .channel('schedules-changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'pickup_schedules' },
+          () => fetchOfficialStats())
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(reportsChannel);
+        supabase.removeChannel(schedulesChannel);
+      };
+    }
+  }, [user, userRole]);
 
   // Different stats based on user role
   const residentStats = [
@@ -168,50 +250,31 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
   const officialStats = [
     { 
       title: "Active Reports", 
-      value: 0, 
+      value: isLoadingOfficialStats ? "..." : activeReportsCount, 
       description: "Unresolved waste reports", 
       icon: <AlertTriangle className="h-5 w-5" />,
-      color: "waste-yellow" 
+      color: "waste-yellow",
+      isLoading: isLoadingOfficialStats
     },
     { 
       title: "Collections Today", 
-      value: 0, 
+      value: isLoadingOfficialStats ? "..." : collectionsToday, 
       description: "Scheduled waste pickups", 
       icon: <Truck className="h-5 w-5" />,
-      color: "waste-green" 
+      color: "waste-green",
+      isLoading: isLoadingOfficialStats
     },
     { 
       title: "Areas Covered", 
-      value: 0, 
-      description: "Districts with active collection", 
+      value: isLoadingOfficialStats ? "..." : areasCovered, 
+      description: "Districts with completed collection", 
       icon: <Calendar className="h-5 w-5" />,
-      color: "waste-blue" 
+      color: "waste-blue",
+      isLoading: isLoadingOfficialStats
     },
   ];
 
-  const adminStats = [
-    { 
-      title: "Total Reports", 
-      value: 0, 
-      description: "Waste issues reported this month", 
-      icon: <AlertTriangle className="h-5 w-5" />,
-      color: "waste-yellow" 
-    },
-    { 
-      title: "Collection Rate", 
-      value: "0%", 
-      description: "Waste collection efficiency", 
-      icon: <Truck className="h-5 w-5" />,
-      color: "waste-green" 
-    },
-    { 
-      title: "Active Users", 
-      value: 0, 
-      description: "Engaged residents and officials", 
-      icon: <Calendar className="h-5 w-5" />,
-      color: "waste-blue" 
-    },
-  ];
+  const adminStats = officialStats; // Admins see the same stats as officials
 
   const statsToShow = userRole === "admin" 
     ? adminStats 

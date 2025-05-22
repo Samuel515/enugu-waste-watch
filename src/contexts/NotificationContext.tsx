@@ -88,7 +88,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         .gte('pickup_date', now.toISOString())
         .lt('pickup_date', oneDayLater.toISOString())
         .order('pickup_date', { ascending: true })
-        .limit(1);
+        .limit(1) as any;
       
       if (data && data.length > 0) {
         // Create a notification for upcoming collection
@@ -129,49 +129,26 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Set up a listener for new reports to create notifications
-  useEffect(() => {
-    if (!user) return;
-
-    // Subscribe to new reports
-    const channel = supabase
-      .channel('report-changes')
-      .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'reports' }, 
-        async (payload) => {
-          const newReport = payload.new;
-          
-          // Create a notification for all users
-          try {
-            await supabase.from('notifications').insert({
-              title: "New Waste Report Submitted",
-              message: `A new waste report has been submitted at ${newReport.location}: "${newReport.title}"`,
-              type: "report",
-              for_all: true,
-              created_by: newReport.user_id
-            });
-          } catch (error) {
-            console.error("Error creating report notification:", error);
-          }
-        })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
   // Refresh notifications count and check collections
   const refreshNotifications = async () => {
     if (!user) return;
     
     try {
-      // Check for unread notifications
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('id')
-        .or(`for_user_id.eq.${user.id},for_all.eq.true`)
-        .eq('read', false);
+      // Prepare the query filters based on user role
+      let query = supabase.from('notifications').select('id');
+      
+      // Filter notifications based on user role and id
+      if (user.role === 'official' || user.role === 'admin') {
+        // Officials & admins see notifications meant for their role or all users or specifically for them
+        query = query.or(`for_user_id.eq.${user.id},for_all.eq.true,recipient_role.eq.${user.role}`);
+      } else {
+        // Residents only see notifications for them or for all users (excluding official-specific ones)
+        query = query.or(`for_user_id.eq.${user.id},for_all.eq.true`);
+        query = query.not('recipient_role', 'eq', 'official');
+      }
+      
+      // Execute query to get unread notifications
+      const { data, error } = await query.eq('read', false);
         
       if (error) throw error;
       
@@ -193,27 +170,28 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Refresh notifications on mount and when user or local read IDs change
+  // Set up a listener for new reports to create notifications (now handled by database trigger)
   useEffect(() => {
-    if (user) {
-      refreshNotifications();
+    if (!user) return;
+
+    // Refresh notifications on mount and when user or local read IDs change
+    refreshNotifications();
       
-      // Set up a subscription for real-time updates
-      const channel = supabase
-        .channel('notification-changes')
-        .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'notifications' },
-          () => refreshNotifications())
-        .subscribe();
-        
-      // Refresh every 5 minutes
-      const intervalId = setInterval(refreshNotifications, 5 * 60 * 1000);
+    // Set up a subscription for real-time updates
+    const channel = supabase
+      .channel('notification-changes')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        () => refreshNotifications())
+      .subscribe();
       
-      return () => {
-        supabase.removeChannel(channel);
-        clearInterval(intervalId);
-      };
-    }
+    // Refresh every 5 minutes
+    const intervalId = setInterval(refreshNotifications, 5 * 60 * 1000);
+    
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(intervalId);
+    };
   }, [user, localReadIds]);
 
   return (

@@ -19,6 +19,7 @@ export type Database = {
           message: string
           read: boolean
           read_at: string | null
+          recipient_role: string | null
           title: string
           type: string
         }
@@ -31,6 +32,7 @@ export type Database = {
           message: string
           read?: boolean
           read_at?: string | null
+          recipient_role?: string | null
           title: string
           type: string
         }
@@ -43,6 +45,7 @@ export type Database = {
           message?: string
           read?: boolean
           read_at?: string | null
+          recipient_role?: string | null
           title?: string
           type?: string
         }

@@ -19,6 +19,7 @@ interface Notification {
   type: "collection" | "report" | "system";
   read_at: string | null;
   for_user_id?: string;
+  recipient_role?: string;
 }
 
 // Key used for localStorage
@@ -52,7 +53,7 @@ const Notifications = () => {
     }
   }, [user]);
   
-  // Fetch notifications from Supabase
+  // Fetch notifications from Supabase with efficient filtering
   useEffect(() => {
     const fetchNotifications = async () => {
       if (!user) return;
@@ -60,11 +61,23 @@ const Notifications = () => {
       setIsLoading(true);
       
       try {
-        const { data, error } = await supabase
+        // Base query
+        let query = supabase
           .from('notifications')
           .select('*')
-          .or(`for_user_id.eq.${user.id},for_all.eq.true`)
           .order('created_at', { ascending: false });
+        
+        // Apply role-specific filters
+        if (user.role === 'official' || user.role === 'admin') {
+          // Officials & admins see notifications meant for their role, all users, or specifically for them
+          query = query.or(`for_user_id.eq.${user.id},for_all.eq.true,recipient_role.eq.${user.role}`);
+        } else {
+          // Residents only see notifications for them or for all users (excluding official-specific ones)
+          query = query.or(`for_user_id.eq.${user.id},for_all.eq.true`);
+          query = query.not('recipient_role', 'eq', 'official');
+        }
+          
+        const { data, error } = await query;
           
         if (error) throw error;
         
@@ -81,7 +94,8 @@ const Notifications = () => {
               read: isLocallyRead || item.read,
               type: item.type,
               read_at: isLocallyRead && !item.read_at ? new Date().toISOString() : item.read_at,
-              for_user_id: item.for_user_id
+              for_user_id: item.for_user_id,
+              recipient_role: item.recipient_role
             };
           });
           
@@ -100,6 +114,25 @@ const Notifications = () => {
     };
     
     fetchNotifications();
+
+    // Set up realtime subscription for new notifications
+    const channel = supabase
+      .channel('notification-updates')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'notifications',
+          filter: user.role === 'official' 
+            ? `for_all=eq.true,recipient_role=eq.official,for_user_id=eq.${user.id}` 
+            : `for_all=eq.true,for_user_id=eq.${user.id}`
+        }, 
+        () => fetchNotifications())
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, toast, localReadIds]);
 
   // Fetch upcoming collections separately

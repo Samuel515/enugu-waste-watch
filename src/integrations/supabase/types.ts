@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      notification_errors: {
+        Row: {
+          created_at: string | null
+          error_message: string
+          id: string
+          related_operation: string | null
+          related_table: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message: string
+          id?: string
+          related_operation?: string | null
+          related_table?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string
+          id?: string
+          related_operation?: string | null
+          related_table?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -174,6 +201,15 @@ export type Database = {
       check_phone_number: {
         Args: { phone_input: string }
         Returns: boolean
+      }
+      log_notification_error: {
+        Args: {
+          p_user_id: string
+          p_error_message: string
+          p_related_table: string
+          p_related_operation: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -124,12 +125,6 @@ const ReportForm = () => {
     setIsLoading(true);
 
     try {
-      // Generate a report ID with format WR-YYYY-MM-DD-XXX
-      const date = new Date();
-      const reportId = `WR-${date.getFullYear()}-${String(
-        date.getMonth() + 1
-      ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
       // Submit the report to Supabase
       // The notification will be created automatically via database trigger
       const { data, error } = (await supabase

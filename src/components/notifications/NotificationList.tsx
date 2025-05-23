@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { Bell, LoaderCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Notification {
   id: string;
@@ -15,8 +15,6 @@ interface Notification {
   read: boolean;
   type: "collection" | "report" | "system";
   read_at: string | null;
-  report_id?: string;
-  new_status?: string;
 }
 
 interface NotificationListProps {
@@ -45,12 +43,6 @@ const NotificationList: React.FC<NotificationListProps> = ({
         variant: "destructive"
       });
     }
-  };
-
-  // Format status text to be more reader-friendly
-  const formatStatus = (status: string | undefined) => {
-    if (!status) return "";
-    return status.charAt(0).toUpperCase() + status.slice(1).replace(/-/g, " ");
   };
 
   if (isLoading) {
@@ -92,27 +84,11 @@ const NotificationList: React.FC<NotificationListProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium">{notification.title}</h4>
-                  {notification.report_id && (
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                      #{notification.report_id.substring(0, 6)}
-                    </span>
-                  )}
                   {!notification.read && (
                     <Badge className="bg-waste-green text-white text-[10px]">New</Badge>
                   )}
                 </div>
                 <p className="text-sm mt-1">{notification.message}</p>
-                {notification.new_status && (
-                  <p className="text-xs mt-1 font-medium">
-                    Status: <span className={`${
-                      notification.new_status === "resolved" 
-                        ? "text-green-600" 
-                        : notification.new_status === "in-progress" 
-                          ? "text-blue-600" 
-                          : "text-orange-500"
-                    }`}>{formatStatus(notification.new_status)}</span>
-                  </p>
-                )}
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-xs text-muted-foreground">
                     {format(new Date(notification.timestamp), "MMM d, yyyy • h:mm a")}

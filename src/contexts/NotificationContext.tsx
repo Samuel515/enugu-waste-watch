@@ -178,32 +178,18 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     refreshNotifications();
       
     // Set up a subscription for real-time updates
-    const notificationChannel = supabase
+    const channel = supabase
       .channel('notification-changes')
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'notifications' },
         () => refreshNotifications())
       .subscribe();
       
-    // Also subscribe to report status changes 
-    const reportStatusChannel = supabase
-      .channel('report-status-changes')
-      .on('postgres_changes', 
-        { event: 'UPDATE', schema: 'public', table: 'reports', filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          // When a report's status changes, refresh notifications
-          if (payload.new && payload.old && payload.new.status !== payload.old.status) {
-            refreshNotifications();
-          }
-        })
-      .subscribe();
-    
     // Refresh every 5 minutes
     const intervalId = setInterval(refreshNotifications, 5 * 60 * 1000);
     
     return () => {
-      supabase.removeChannel(notificationChannel);
-      supabase.removeChannel(reportStatusChannel);
+      supabase.removeChannel(channel);
       clearInterval(intervalId);
     };
   }, [user, localReadIds]);

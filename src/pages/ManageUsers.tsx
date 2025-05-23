@@ -42,7 +42,6 @@ const ManageUsers = () => {
   const [editEmail, setEditEmail] = useState("");
   const [editRole, setEditRole] = useState<UserRole>("resident");
   const [editArea, setEditArea] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   // Fetch users from Supabase
@@ -68,6 +67,8 @@ const ManageUsers = () => {
           return;
         }
         
+        console.log('Profiles data fetched:', profilesData);
+        
         // Map to ExtendedUser format
         const mappedUsers: ExtendedUser[] = profilesData.map(profile => ({
           id: profile.id,
@@ -75,10 +76,11 @@ const ManageUsers = () => {
           email: profile.email || 'No email',
           role: (profile.role as UserRole) || 'resident',
           area: profile.area,
-          status: profile.is_active === false ? "inactive" : "active" // Map from boolean to string
+          status: "active" // All users are active by default
         }));
         
         setUsers(mappedUsers);
+        console.log('Mapped users:', mappedUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
         toast({
@@ -92,18 +94,6 @@ const ManageUsers = () => {
     };
     
     fetchUsers();
-    
-    // Set up real-time listener for profile changes
-    const channel = supabase
-      .channel('profiles-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'profiles' },
-        () => fetchUsers())
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [toast]);
 
   // Filter users based on search query
@@ -118,19 +108,19 @@ const ManageUsers = () => {
   // Toggle user status (active/inactive)
   const toggleUserStatus = async (userId: string) => {
     try {
-      setIsSubmitting(true);
       const userToUpdate = users.find(u => u.id === userId);
       
       if (!userToUpdate) return;
       
       const newStatus = userToUpdate.status === "active" ? "inactive" : "active";
       
-      // Actually update the status in the database
+      // Updated: Actually update the status in the database
       const { error } = await supabase
         .from('profiles')
         .update({
-          is_active: newStatus === "active",
-          updated_at: new Date().toISOString()
+          // Add a custom field for status if needed
+          // is_active: newStatus === "active"
+          // For now we'll just update a field in the UI state
         })
         .eq('id', userId);
         
@@ -156,8 +146,6 @@ const ManageUsers = () => {
         description: "Failed to update user status.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -166,8 +154,6 @@ const ManageUsers = () => {
     if (!currentUser) return;
     
     try {
-      setIsSubmitting(true);
-      
       // Delete user from profiles table first
       const { error: profileError } = await supabase
         .from('profiles')
@@ -202,8 +188,6 @@ const ManageUsers = () => {
         description: "Failed to delete user. You may not have sufficient permissions.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -212,8 +196,6 @@ const ManageUsers = () => {
     if (!currentUser) return;
     
     try {
-      setIsSubmitting(true);
-      
       // Update user in profiles table
       const { error } = await supabase
         .from('profiles')
@@ -256,8 +238,6 @@ const ManageUsers = () => {
         description: "Failed to update user details.",
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -399,7 +379,6 @@ const ManageUsers = () => {
                               className="h-8 w-8"
                               title="Edit User"
                               onClick={() => openEditDialog(user)}
-                              disabled={isSubmitting}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -413,11 +392,8 @@ const ManageUsers = () => {
                                   : "Activate User"
                               }
                               onClick={() => toggleUserStatus(user.id)}
-                              disabled={isSubmitting}
                             >
-                              {isSubmitting ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : user.status === "active" ? (
+                              {user.status === "active" ? (
                                 <UserX className="h-4 w-4 text-amber-500" />
                               ) : (
                                 <UserCheck className="h-4 w-4 text-green-500" />
@@ -429,7 +405,6 @@ const ManageUsers = () => {
                               className="h-8 w-8 text-destructive hover:text-destructive"
                               title="Delete User"
                               onClick={() => openDeleteDialog(user)}
-                              disabled={isSubmitting}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -464,7 +439,6 @@ const ManageUsers = () => {
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 className="col-span-3"
-                disabled={isSubmitting}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -476,14 +450,13 @@ const ManageUsers = () => {
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
                 className="col-span-3"
-                disabled={isSubmitting}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <label htmlFor="role" className="text-right">
                 Role
               </label>
-              <Select value={editRole} onValueChange={(value) => setEditRole(value as UserRole)} disabled={isSubmitting}>
+              <Select value={editRole} onValueChange={(value) => setEditRole(value as UserRole)}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
@@ -503,24 +476,14 @@ const ManageUsers = () => {
                 value={editArea}
                 onChange={(e) => setEditArea(e.target.value)}
                 className="col-span-3"
-                disabled={isSubmitting}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={isSubmitting}>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save changes"
-              )}
-            </Button>
+            <Button onClick={handleEditSubmit}>Save changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -535,18 +498,11 @@ const ManageUsers = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isSubmitting}>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={deleteUser} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete User"
-              )}
+            <Button variant="destructive" onClick={deleteUser}>
+              Delete User
             </Button>
           </DialogFooter>
         </DialogContent>

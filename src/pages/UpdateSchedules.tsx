@@ -1,69 +1,75 @@
+
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, PlusCircle, Trash2, Calendar as CalendarIcon2, LoaderCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { LoaderCircle } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
-interface PickupSchedule {
-  id: string;
-  area: string;
-  pickup_date: string;
-  status: "scheduled" | "completed" | "canceled";
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, setHours, setMinutes, parse, startOfDay, isSameDay } from "date-fns";
+import { PickupSchedule } from "@/types/reports";
+import enuguLocations from "@/data/locations";
 
 const UpdateSchedules = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const [area, setArea] = useState("");
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [time, setTime] = useState("08:00"); // Default time 8:00 AM
+  const [notes, setNotes] = useState("");
   const [schedules, setSchedules] = useState<PickupSchedule[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
-  const [dialogType, setDialogType] = useState<"complete" | "cancel" | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
+  const [areas, setAreas] = useState<string[]>(enuguLocations);
   
-  // Fetch schedules from Supabase
+  // Generate time options from 6:00 AM to 8:00 PM in 30-minute increments
+  const timeOptions = Array.from({ length: 29 }, (_, i) => {
+    const hour = Math.floor(i / 2) + 6;
+    const minute = i % 2 === 0 ? "00" : "30";
+    const period = hour < 12 || hour === 24 ? "AM" : "PM";
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    return {
+      value: `${hour.toString().padStart(2, "0")}:${minute}`,
+      label: `${displayHour}:${minute} ${period}`
+    };
+  });
+  
+  // Fetch existing schedules and unique areas
   useEffect(() => {
     const fetchSchedules = async () => {
-      if (!user || user.role === "resident") return;
-      
-      setIsLoading(true);
-      
       try {
-        // Get the current date at midnight (start of day)
-        const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0);
+        setIsLoading(true);
         
-        // Only fetch schedules with dates on or after the current date
-        const { data, error } = await supabase
+        // Fetch schedules
+        const { data: schedulesData, error: schedulesError } = await supabase
           .from('pickup_schedules')
           .select('*')
-          .gte('pickup_date', currentDate.toISOString())
           .order('pickup_date', { ascending: true }) as any;
+          
+        if (schedulesError) throw schedulesError;
         
-        if (error) throw error;
+        // Set schedules
+        if (schedulesData) {
+          setSchedules(schedulesData as PickupSchedule[]);
+        }
         
-        if (data) {
-          setSchedules(data);
+        // Set default area if none selected
+        if (!area && areas.length > 0) {
+          setArea(areas[0]);
         }
       } catch (error) {
-        console.error('Error fetching schedules:', error);
+        console.error('Error fetching data:', error);
         toast({
           title: "Error",
-          description: "Failed to load schedules",
+          description: "Failed to load schedules or areas",
           variant: "destructive"
         });
       } finally {
@@ -72,228 +78,353 @@ const UpdateSchedules = () => {
     };
     
     fetchSchedules();
+  }, []);
+
+  const combineDateAndTime = (date?: Date, timeStr = "00:00"): Date => {
+    if (!date) return new Date();
     
-    // Set up real-time listener for schedule changes
-    const channel = supabase
-      .channel('schedule-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'pickup_schedules' },
-        () => fetchSchedules())
-      .subscribe();
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return setMinutes(setHours(date, hours), minutes);
+  };
+
+  const handleCreateSchedule = async () => {
+    if (!date || !area) {
+      toast({
+        title: "Missing information",
+        description: "Please select an area and date for the pickup",
+        variant: "destructive"
+      });
+      return;
+    }
     
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, toast]);
-  
-  // Function to update schedule status
-  const updateScheduleStatus = async (scheduleId: string, newStatus: "completed" | "canceled") => {
     try {
-      // Update the schedule status
-      const { error } = await supabase
-        .from('pickup_schedules')
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', scheduleId);
+      setIsCreating(true);
       
+      const combinedDateTime = combineDateAndTime(date, time);
+      
+      const newSchedule = {
+        area,
+        pickup_date: combinedDateTime.toISOString(),
+        notes: notes.trim() || null,
+        status: "scheduled",
+        created_by: user?.id
+      } as any;
+      
+      const { data, error } = await supabase
+        .from('pickup_schedules')
+        .insert(newSchedule)
+        .select() as any;
+        
       if (error) throw error;
       
-      // Update the local state
-      setSchedules(schedules.map(schedule => 
-        schedule.id === scheduleId 
-          ? { ...schedule, status: newStatus, updated_at: new Date().toISOString() } 
-          : schedule
-      ));
-      
-      // Show success toast
-      toast({
-        title: "Status updated",
-        description: `Schedule has been marked as ${newStatus}`,
-      });
-      
-      // Close the dialog
-      setSelectedScheduleId(null);
-      setDialogType(null);
+      if (data) {
+        // Add new schedule to list
+        setSchedules([...schedules, data[0] as PickupSchedule]);
+        
+        // Clear form
+        setNotes("");
+        
+        toast({
+          title: "Schedule created",
+          description: `Pickup scheduled for ${area} on ${format(combinedDateTime, 'PPP')} at ${format(combinedDateTime, 'h:mm a')}`
+        });
+      }
     } catch (error) {
-      console.error(`Error updating schedule to ${newStatus}:`, error);
+      console.error('Error creating schedule:', error);
       toast({
-        title: "Update failed",
-        description: `Failed to mark schedule as ${newStatus}`,
+        title: "Failed to create schedule",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('pickup_schedules')
+        .delete()
+        .eq('id', id) as any;
+        
+      if (error) throw error;
+      
+      // Remove from list
+      setSchedules(schedules.filter(s => s.id !== id));
+      
+      toast({
+        title: "Schedule deleted",
+        description: "The pickup schedule has been removed"
+      });
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+      toast({
+        title: "Failed to delete schedule",
+        description: "Please try again later",
         variant: "destructive"
       });
     }
   };
-  
-  // Check if a date is today
-  const isToday = (dateStr: string) => {
-    const date = new Date(dateStr);
+
+  const updateScheduleStatus = async (id: string, status: "scheduled" | "completed" | "cancelled") => {
+    try {
+      setIsUpdating(prev => ({ ...prev, [id]: true }));
+      
+      const { error } = await supabase
+        .from('pickup_schedules')
+        .update({ status })
+        .eq('id', id) as any;
+        
+      if (error) throw error;
+      
+      // Update in list
+      setSchedules(schedules.map(s => 
+        s.id === id ? { ...s, status } : s
+      ));
+      
+      toast({
+        title: "Status updated",
+        description: `Schedule has been marked as ${status}`
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "Failed to update status",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdating(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "scheduled":
+        return "bg-blue-100 text-blue-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // Fixed: Properly determine if a date is today (regardless of time)
+  const isToday = (date: Date): boolean => {
     const today = new Date();
-    
-    return date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear();
+    return isSameDay(date, today);
   };
-  
-  // Function to format date
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    };
-    
-    return date.toLocaleDateString('en-US', options);
-  };
-
-  // Handle dialog opening
-  const openDialog = (scheduleId: string, type: "complete" | "cancel") => {
-    setSelectedScheduleId(scheduleId);
-    setDialogType(type);
-  };
-
-  // Handle dialog closing
-  const closeDialog = () => {
-    setSelectedScheduleId(null);
-    setDialogType(null);
-  };
-
-  // Handle completing a schedule
-  const handleComplete = () => {
-    if (selectedScheduleId) {
-      updateScheduleStatus(selectedScheduleId, "completed");
-    }
-  };
-
-  // Handle canceling a schedule
-  const handleCancel = () => {
-    if (selectedScheduleId) {
-      updateScheduleStatus(selectedScheduleId, "canceled");
-    }
-  };
-
-  if (user?.role === "resident") {
-    return (
-      <Layout requireAuth>
-        <div className="container py-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Access Denied
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              You do not have permission to view this page.
-            </p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout requireAuth allowedRoles={["official", "admin"]}>
       <div className="container py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Update Schedules</h1>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">Update Pickup Schedules</h1>
           <p className="text-muted-foreground">
-            View and update waste collection schedules
+            Create and manage waste collection schedules
           </p>
         </div>
-        
-        {isLoading ? (
-          <div className="flex justify-center items-center h-40">
-            <LoaderCircle className="h-8 w-8 animate-spin text-waste-green" />
-          </div>
-        ) : schedules.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-lg text-muted-foreground">No upcoming schedules available</p>
-            <Button asChild className="mt-4">
-              <Link to="/schedule/new">Create New Schedule</Link>
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {schedules.map((schedule) => (
-              <Card key={schedule.id} className="relative">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>Collection in {schedule.area}</CardTitle>
-                      <CardDescription>
-                        {formatDate(schedule.pickup_date)}
-                      </CardDescription>
-                    </div>
-                    <Badge 
-                      className={`${
-                        schedule.status === 'completed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : schedule.status === 'canceled' 
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-blue-100 text-blue-800'
-                      }`}
-                    >
-                      {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="pb-2">
-                  <p className="text-sm">
-                    {schedule.notes || "No additional notes for this collection."}
-                  </p>
-                </CardContent>
-                
-                {schedule.status === 'scheduled' && (
-                  <CardFooter className="flex justify-end space-x-2 pt-0">
+
+        <div className="grid gap-8 md:grid-cols-3">
+          <Card className="md:col-span-1 max-h-max">
+            <CardHeader>
+              <CardTitle>Create New Schedule</CardTitle>
+              <CardDescription>
+                Schedule a new pickup for a specific area
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="area">Area</Label>
+                <Select value={area} onValueChange={setArea}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {areas.map((areaOption) => (
+                      <SelectItem key={areaOption} value={areaOption}>
+                        {areaOption}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Pickup Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      size="sm"
-                      onClick={() => openDialog(schedule.id, "cancel")}
+                      className="w-full justify-start text-left font-normal"
                     >
-                      Cancel
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, 'PPP') : <span>Pick a date</span>}
                     </Button>
-                    <Button 
-                      size="sm"
-                      onClick={() => openDialog(schedule.id, "complete")}
-                    >
-                      Mark Complete
-                    </Button>
-                  </CardFooter>
-                )}
-              </Card>
-            ))}
-          </div>
-        )}
-        
-        <Dialog open={!!selectedScheduleId && !!dialogType} onOpenChange={closeDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {dialogType === "complete" ? "Complete Schedule" : "Cancel Schedule"}
-              </DialogTitle>
-              <DialogDescription>
-                {dialogType === "complete" 
-                  ? "Are you sure you want to mark this schedule as completed?" 
-                  : "Are you sure you want to cancel this schedule?"}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={closeDialog}>
-                Cancel
-              </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="time">Pickup Time</Label>
+                <Select value={time} onValueChange={setTime}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Add any additional information"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+              
               <Button 
-                onClick={dialogType === "complete" ? handleComplete : handleCancel}
-                variant={dialogType === "cancel" ? "destructive" : "default"}
+                className="w-full" 
+                onClick={handleCreateSchedule}
+                disabled={!date || !area || isCreating}
               >
-                {dialogType === "complete" ? "Complete" : "Cancel Schedule"}
+                {isCreating ? (
+                  <>
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create Schedule
+                  </>
+                )}
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Existing Schedules</CardTitle>
+              <CardDescription>
+                View and manage all waste collection schedules
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-10">
+                  <LoaderCircle className="mx-auto h-8 w-8 text-waste-green animate-spin mb-2" />
+                  <p>Loading schedules...</p>
+                </div>
+              ) : schedules.length === 0 ? (
+                <div className="text-center py-10">
+                  <CalendarIcon2 className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">No schedules found</p>
+                  <p className="text-xs text-muted-foreground">Create a new schedule to see it here</p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Area</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Notes</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {schedules.map((schedule) => {
+                        const pickupDate = new Date(schedule.pickup_date);
+                        // Modified: Check for past dates without considering time
+                        const isPast = pickupDate < startOfDay(new Date()) && !isToday(pickupDate);
+                        
+                        return (
+                          <TableRow key={schedule.id}>
+                            <TableCell>{schedule.area}</TableCell>
+                            <TableCell>{format(pickupDate, 'PP')}</TableCell>
+                            <TableCell>{format(pickupDate, 'h:mm a')}</TableCell>
+                            <TableCell>
+                              <Badge className={getStatusBadgeClass(schedule.status)}>
+                                {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-[200px] truncate">
+                              {schedule.notes || "-"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                {schedule.status !== "completed" && !isPast && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateScheduleStatus(schedule.id, "completed")}
+                                    disabled={isUpdating[schedule.id]}
+                                  >
+                                    {isUpdating[schedule.id] ? (
+                                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      "Mark Complete"
+                                    )}
+                                  </Button>
+                                )}
+                                
+                                {schedule.status !== "cancelled" && !isPast && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateScheduleStatus(schedule.id, "cancelled")}
+                                    disabled={isUpdating[schedule.id]}
+                                  >
+                                    {isUpdating[schedule.id] ? (
+                                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      "Cancel"
+                                    )}
+                                  </Button>
+                                )}
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => handleDeleteSchedule(schedule.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </Layout>
   );

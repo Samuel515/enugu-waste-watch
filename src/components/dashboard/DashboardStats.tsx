@@ -267,7 +267,7 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
     { 
       title: "Areas Covered", 
       value: isLoadingOfficialStats ? "..." : areasCovered, 
-      description: "Districts with completed collection", 
+      description: "Number of completed collection for today", 
       icon: <Calendar className="h-5 w-5" />,
       color: "waste-blue",
       isLoading: isLoadingOfficialStats

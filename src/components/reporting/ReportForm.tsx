@@ -239,7 +239,6 @@ const ReportForm = () => {
             </Label>
             <Input
               id="location"
-              value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Enter a detailed location of the issue"
               disabled={isLoading}

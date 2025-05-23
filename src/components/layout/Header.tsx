@@ -34,7 +34,7 @@ const Header = () => {
   ];
 
   const adminMenuItems = [
-    { label: "Analytics", href: "/analytics" },
+    { label: "Analytics", href: "/admin/analytics" },
     { label: "Manage Users", href: "/manage-users" },
     { label: "Settings", href: "/settings" },
   ];

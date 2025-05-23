@@ -229,7 +229,7 @@ const UpdateSchedules = () => {
         </div>
 
         <div className="grid gap-8 md:grid-cols-3">
-          <Card className="md:col-span-1">
+          <Card className="md:col-span-1 max-h-max">
             <CardHeader>
               <CardTitle>Create New Schedule</CardTitle>
               <CardDescription>

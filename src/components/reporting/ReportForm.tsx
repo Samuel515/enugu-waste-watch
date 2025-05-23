@@ -138,6 +138,7 @@ const ReportForm = () => {
           user_name: user.name,
           user_area: user.area,
           image_url: images.length > 0 ? images[0] : null,
+          waste_type: wasteType,  // Adding the waste type to the submission
         })
         .select()) as any;
 
@@ -238,6 +239,7 @@ const ReportForm = () => {
             </Label>
             <Input
               id="location"
+              value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Enter a detailed location of the issue"
               disabled={isLoading}

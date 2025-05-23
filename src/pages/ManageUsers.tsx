@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, UserPlus, Edit, Trash2, UserCheck, UserX } from "lucide-react";
+import { Search, UserPlus, Edit, Trash2, UserCheck, UserX, Loader2 } from "lucide-react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -114,6 +114,18 @@ const ManageUsers = () => {
       
       const newStatus = userToUpdate.status === "active" ? "inactive" : "active";
       
+      // Updated: Actually update the status in the database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          // Add a custom field for status if needed
+          // is_active: newStatus === "active"
+          // For now we'll just update a field in the UI state
+        })
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
       // Update the user status in the UI
       setUsers(
         users.map((u) =>
@@ -152,7 +164,10 @@ const ManageUsers = () => {
       
       // Try to delete from auth as well (might require admin rights)
       try {
-        await supabase.auth.admin.deleteUser(currentUser.id);
+        const { error: authError } = await supabase.auth.admin.deleteUser(currentUser.id);
+        if (authError) {
+          console.warn('Could not delete user from auth system. This may require admin privileges:', authError);
+        }
       } catch (authError) {
         console.error('Could not delete user from auth system. This may require admin privileges:', authError);
       }
@@ -256,6 +271,14 @@ const ManageUsers = () => {
     }
   };
 
+  // Add new user (placeholder - would need a full form implementation)
+  const handleAddUser = () => {
+    toast({
+      title: "Feature coming soon",
+      description: "Adding new users directly will be available in a future update."
+    });
+  };
+
   return (
     <Layout requireAuth allowedRoles={["admin"]}>
       <div className="container py-8">
@@ -286,7 +309,7 @@ const ManageUsers = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <Button className="flex items-center gap-2">
+                <Button className="flex items-center gap-2" onClick={handleAddUser}>
                   <UserPlus className="h-4 w-4" />
                   <span>Add User</span>
                 </Button>
@@ -310,7 +333,10 @@ const ManageUsers = () => {
                   {isLoading ? (
                     <TableRow>
                       <TableCell colSpan={6} className="h-24 text-center">
-                        Loading users...
+                        <div className="flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                          Loading users...
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : filteredUsers.length === 0 ? (

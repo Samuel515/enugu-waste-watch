@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, setHours, setMinutes, parse } from "date-fns";
+import { format, setHours, setMinutes, parse, startOfDay, isSameDay } from "date-fns";
 import { PickupSchedule } from "@/types/reports";
 import enuguLocations from "@/data/locations";
 
@@ -212,6 +212,12 @@ const UpdateSchedules = () => {
     }
   };
 
+  // Fixed: Properly determine if a date is today (regardless of time)
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return isSameDay(date, today);
+  };
+
   return (
     <Layout requireAuth allowedRoles={["official", "admin"]}>
       <div className="container py-8">
@@ -351,7 +357,8 @@ const UpdateSchedules = () => {
                     <TableBody>
                       {schedules.map((schedule) => {
                         const pickupDate = new Date(schedule.pickup_date);
-                        const isPast = pickupDate < new Date();
+                        // Modified: Check for past dates without considering time
+                        const isPast = pickupDate < startOfDay(new Date()) && !isToday(pickupDate);
                         
                         return (
                           <TableRow key={schedule.id}>

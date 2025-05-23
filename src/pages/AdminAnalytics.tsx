@@ -1,11 +1,12 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie } from 'recharts';
 import { Report, ReportStatus } from "@/types/reports";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AnalyticsData {
   totalReports: number;
@@ -45,6 +46,50 @@ const AdminAnalytics = () => {
     reportsTrend: [],
   });
   const [isLoading, setIsLoading] = useState(true);
+  
+  // References for the scroll animation
+  const statsCardsRef = useRef<HTMLDivElement>(null);
+  const trendChartRef = useRef<HTMLDivElement>(null);
+  const statusChartRef = useRef<HTMLDivElement>(null);
+  const areaChartRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Initialize intersection observer for fade-in animations
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1
+    };
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-fade-in');
+          // Stop observing once animation is triggered
+          observer.unobserve(entry.target);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+    
+    // Add all the refs to be observed
+    const elements = [statsCardsRef.current, trendChartRef.current, statusChartRef.current, areaChartRef.current];
+    
+    elements.forEach(element => {
+      if (element) {
+        // Add initial opacity-0 class to hide elements
+        element.classList.add('opacity-0');
+        observer.observe(element);
+      }
+    });
+
+    return () => {
+      elements.forEach(element => {
+        if (element) observer.unobserve(element);
+      });
+    };
+  }, []);
 
   useEffect(() => {
     const fetchAnalyticsData = async () => {
@@ -70,7 +115,10 @@ const AdminAnalytics = () => {
       } catch (error) {
         console.error('Error fetching analytics data:', error);
       } finally {
-        setIsLoading(false);
+        // Simulate a minimum loading time for better UX
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 800);
       }
     };
 
@@ -231,6 +279,21 @@ const AdminAnalytics = () => {
     }
   };
 
+  // Loading animations component
+  const LoadingDots = () => (
+    <div className="flex items-center space-x-1">
+      <div className="animate-bounce h-2 w-2 bg-current rounded-full" style={{ animationDelay: '0s' }}></div>
+      <div className="animate-bounce h-2 w-2 bg-current rounded-full" style={{ animationDelay: '0.2s' }}></div>
+      <div className="animate-bounce h-2 w-2 bg-current rounded-full" style={{ animationDelay: '0.4s' }}></div>
+    </div>
+  );
+
+  const LoadingSpinner = () => (
+    <div className="flex justify-center items-center h-full">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-waste-green"></div>
+    </div>
+  );
+
   return (
     <Layout requireAuth allowedRoles={["admin"]}>
       <div className="container py-8">
@@ -257,52 +320,64 @@ const AdminAnalytics = () => {
           </Select>
         </div>
 
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-          <Card className="bg-gradient-to-br from-green-50 to-green-100">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3" ref={statsCardsRef}>
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 transform transition-all duration-500">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl text-green-800">Resolved Reports</CardTitle>
               <CardDescription className="text-green-700">
-                {getStatusPercentage("resolved")}% of total reports
+                {isLoading ? <LoadingDots /> : `${getStatusPercentage("resolved")}% of total reports`}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-800">
-                {isLoading ? "..." : analyticsData.resolvedReports}
-              </div>
+              {isLoading ? (
+                <Skeleton className="h-8 w-16 bg-green-100" />
+              ) : (
+                <div className="text-3xl font-bold text-green-800">
+                  {analyticsData.resolvedReports}
+                </div>
+              )}
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 transform transition-all duration-500">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl text-blue-800">In Progress</CardTitle>
               <CardDescription className="text-blue-700">
-                {getStatusPercentage("in-progress")}% of total reports
+                {isLoading ? <LoadingDots /> : `${getStatusPercentage("in-progress")}% of total reports`}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-800">
-                {isLoading ? "..." : analyticsData.inProgressReports}
-              </div>
+              {isLoading ? (
+                <Skeleton className="h-8 w-16 bg-blue-100" />
+              ) : (
+                <div className="text-3xl font-bold text-blue-800">
+                  {analyticsData.inProgressReports}
+                </div>
+              )}
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100">
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 transform transition-all duration-500">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl text-amber-800">Pending Reports</CardTitle>
               <CardDescription className="text-amber-700">
-                {getStatusPercentage("pending")}% of total reports
+                {isLoading ? <LoadingDots /> : `${getStatusPercentage("pending")}% of total reports`}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-amber-800">
-                {isLoading ? "..." : analyticsData.pendingReports}
-              </div>
+              {isLoading ? (
+                <Skeleton className="h-8 w-16 bg-amber-100" />
+              ) : (
+                <div className="text-3xl font-bold text-amber-800">
+                  {analyticsData.pendingReports}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
         <div className="grid gap-4 mt-4 grid-cols-1 lg:grid-cols-2">
-          <Card className="col-span-1 lg:col-span-2">
+          <Card className="col-span-1 lg:col-span-2" ref={trendChartRef}>
             <CardHeader>
               <CardTitle>Report Trends</CardTitle>
               <CardDescription>
@@ -311,9 +386,7 @@ const AdminAnalytics = () => {
             </CardHeader>
             <CardContent className="h-80">
               {isLoading ? (
-                <div className="flex h-full items-center justify-center">
-                  <p>Loading chart data...</p>
-                </div>
+                <LoadingSpinner />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -332,7 +405,7 @@ const AdminAnalytics = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card ref={statusChartRef} className="transform transition-all duration-500">
             <CardHeader>
               <CardTitle>Reports by Status</CardTitle>
               <CardDescription>
@@ -341,9 +414,7 @@ const AdminAnalytics = () => {
             </CardHeader>
             <CardContent className="h-80">
               {isLoading ? (
-                <div className="flex h-full items-center justify-center">
-                  <p>Loading chart data...</p>
-                </div>
+                <LoadingSpinner />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -369,7 +440,7 @@ const AdminAnalytics = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card ref={areaChartRef} className="transform transition-all duration-500">
             <CardHeader>
               <CardTitle>Top Areas with Reports</CardTitle>
               <CardDescription>
@@ -378,9 +449,7 @@ const AdminAnalytics = () => {
             </CardHeader>
             <CardContent className="h-80">
               {isLoading ? (
-                <div className="flex h-full items-center justify-center">
-                  <p>Loading chart data...</p>
-                </div>
+                <LoadingSpinner />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart

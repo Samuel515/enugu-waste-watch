@@ -12,14 +12,15 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, PlusCircle, Trash2, Calendar as CalendarIcon2, LoaderCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, setHours, setMinutes, parse, startOfDay, isSameDay } from "date-fns";
+import { format, setHours, setMinutes, parse, startOfDay, isSameDay, isBefore } from "date-fns";
 import { PickupSchedule } from "@/types/reports";
 import enuguLocations from "@/data/locations";
 
 const UpdateSchedules = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [area, setArea] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [time, setTime] = useState("08:00"); // Default time 8:00 AM
@@ -48,10 +49,13 @@ const UpdateSchedules = () => {
       try {
         setIsLoading(true);
         
-        // Fetch schedules
+        // Fetch schedules - only future and today's schedules
+        const today = startOfDay(new Date());
+        
         const { data: schedulesData, error: schedulesError } = await supabase
           .from('pickup_schedules')
           .select('*')
+          .gte('pickup_date', today.toISOString())
           .order('pickup_date', { ascending: true }) as any;
           
         if (schedulesError) throw schedulesError;
@@ -78,7 +82,7 @@ const UpdateSchedules = () => {
     };
     
     fetchSchedules();
-  }, []);
+  }, [area, areas.length, toast]);
 
   const combineDateAndTime = (date?: Date, timeStr = "00:00"): Date => {
     if (!date) return new Date();
@@ -212,15 +216,21 @@ const UpdateSchedules = () => {
     }
   };
 
-  // Fixed: Properly determine if a date is today (regardless of time)
+  // Properly determine if a date is today (regardless of time)
   const isToday = (date: Date): boolean => {
     const today = new Date();
     return isSameDay(date, today);
   };
 
+  // Filter out past schedules - only display today and future schedules
+  const currentSchedules = schedules.filter(schedule => {
+    const scheduleDate = new Date(schedule.pickup_date);
+    return !isBefore(scheduleDate, startOfDay(new Date())) || isToday(scheduleDate);
+  });
+
   return (
     <Layout requireAuth allowedRoles={["official", "admin"]}>
-      <div className="container py-8">
+      <div className="container py-8 animate-fade-in">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Update Pickup Schedules</h1>
           <p className="text-muted-foreground">
@@ -271,6 +281,7 @@ const UpdateSchedules = () => {
                       selected={date}
                       onSelect={setDate}
                       initialFocus
+                      disabled={(date) => isBefore(date, startOfDay(new Date())) && !isToday(date)}
                     />
                   </PopoverContent>
                 </Popover>
@@ -335,7 +346,7 @@ const UpdateSchedules = () => {
                   <LoaderCircle className="mx-auto h-8 w-8 text-waste-green animate-spin mb-2" />
                   <p>Loading schedules...</p>
                 </div>
-              ) : schedules.length === 0 ? (
+              ) : currentSchedules.length === 0 ? (
                 <div className="text-center py-10">
                   <CalendarIcon2 className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
                   <p className="text-muted-foreground">No schedules found</p>
@@ -355,10 +366,8 @@ const UpdateSchedules = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {schedules.map((schedule) => {
+                      {currentSchedules.map((schedule) => {
                         const pickupDate = new Date(schedule.pickup_date);
-                        // Modified: Check for past dates without considering time
-                        const isPast = pickupDate < startOfDay(new Date()) && !isToday(pickupDate);
                         
                         return (
                           <TableRow key={schedule.id}>
@@ -375,7 +384,7 @@ const UpdateSchedules = () => {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                {schedule.status !== "completed" && !isPast && (
+                                {schedule.status !== "completed" && (
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -390,7 +399,7 @@ const UpdateSchedules = () => {
                                   </Button>
                                 )}
                                 
-                                {schedule.status !== "cancelled" && !isPast && (
+                                {schedule.status !== "cancelled" && (
                                   <Button
                                     variant="outline"
                                     size="sm"

@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie } from 'recharts';
 import { Report, ReportStatus } from "@/types/reports";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoaderCircle } from "lucide-react";
 
 interface AnalyticsData {
   totalReports: number;
@@ -231,17 +233,26 @@ const AdminAnalytics = () => {
     }
   };
 
+  // Animation helper for loading dots
+  const LoadingDots = () => (
+    <span className="inline-flex items-center">
+      <span className="animate-bounce mx-0.5 w-1 h-1 rounded-full bg-current"></span>
+      <span className="animate-bounce mx-0.5 w-1 h-1 rounded-full bg-current animation-delay-200"></span>
+      <span className="animate-bounce mx-0.5 w-1 h-1 rounded-full bg-current animation-delay-400"></span>
+    </span>
+  );
+
   return (
     <Layout requireAuth allowedRoles={["admin"]}>
       <div className="container py-8">
-        <div className="mb-8">
+        <div className="mb-8 animate-fade-in">
           <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
           <p className="text-muted-foreground">
             Overview of waste management reports and trends
           </p>
         </div>
 
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-end mb-6 animate-fade-in">
           <Select
             value={timeRange}
             onValueChange={(value) => setTimeRange(value as "week" | "month" | "year")}
@@ -258,7 +269,7 @@ const AdminAnalytics = () => {
         </div>
 
         <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-          <Card className="bg-gradient-to-br from-green-50 to-green-100">
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 animate-fade-in">
             <CardHeader className="pb-2">
               <CardTitle className="text-xl text-green-800">Resolved Reports</CardTitle>
               <CardDescription className="text-green-700">
@@ -267,12 +278,12 @@ const AdminAnalytics = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-green-800">
-                {isLoading ? "..." : analyticsData.resolvedReports}
+                {isLoading ? <LoadingDots /> : analyticsData.resolvedReports}
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 animate-fade-in" style={{ animationDelay: "150ms" }}>
             <CardHeader className="pb-2">
               <CardTitle className="text-xl text-blue-800">In Progress</CardTitle>
               <CardDescription className="text-blue-700">
@@ -281,12 +292,12 @@ const AdminAnalytics = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-blue-800">
-                {isLoading ? "..." : analyticsData.inProgressReports}
+                {isLoading ? <LoadingDots /> : analyticsData.inProgressReports}
               </div>
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100">
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 animate-fade-in" style={{ animationDelay: "300ms" }}>
             <CardHeader className="pb-2">
               <CardTitle className="text-xl text-amber-800">Pending Reports</CardTitle>
               <CardDescription className="text-amber-700">
@@ -295,14 +306,14 @@ const AdminAnalytics = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-amber-800">
-                {isLoading ? "..." : analyticsData.pendingReports}
+                {isLoading ? <LoadingDots /> : analyticsData.pendingReports}
               </div>
             </CardContent>
           </Card>
         </div>
 
         <div className="grid gap-4 mt-4 grid-cols-1 lg:grid-cols-2">
-          <Card className="col-span-1 lg:col-span-2">
+          <Card className="col-span-1 lg:col-span-2 animate-fade-in" style={{ animationDelay: "450ms" }}>
             <CardHeader>
               <CardTitle>Report Trends</CardTitle>
               <CardDescription>
@@ -312,6 +323,7 @@ const AdminAnalytics = () => {
             <CardContent className="h-80">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center">
+                  <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mr-2" />
                   <p>Loading chart data...</p>
                 </div>
               ) : (
@@ -332,7 +344,7 @@ const AdminAnalytics = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="animate-fade-in" style={{ animationDelay: "600ms" }}>
             <CardHeader>
               <CardTitle>Reports by Status</CardTitle>
               <CardDescription>
@@ -342,6 +354,7 @@ const AdminAnalytics = () => {
             <CardContent className="h-80">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center">
+                  <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mr-2" />
                   <p>Loading chart data...</p>
                 </div>
               ) : (
@@ -369,7 +382,7 @@ const AdminAnalytics = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="animate-fade-in" style={{ animationDelay: "750ms" }}>
             <CardHeader>
               <CardTitle>Top Areas with Reports</CardTitle>
               <CardDescription>
@@ -379,6 +392,7 @@ const AdminAnalytics = () => {
             <CardContent className="h-80">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center">
+                  <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mr-2" />
                   <p>Loading chart data...</p>
                 </div>
               ) : (

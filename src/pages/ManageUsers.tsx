@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Search, UserPlus, Edit, Trash2, UserCheck, UserX, Loader2 } from "lucide-react";
-import { useAuth, UserRole } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Dialog,
@@ -25,9 +25,9 @@ interface ExtendedUser {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
+  role: "admin" | "official" | "resident";
   area: string | null;
-  status: "active" | "inactive";
+  is_active: boolean;
 }
 
 const ManageUsers = () => {
@@ -40,7 +40,7 @@ const ManageUsers = () => {
   const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editRole, setEditRole] = useState<UserRole>("resident");
+  const [editRole, setEditRole] = useState<"admin" | "official" | "resident">("resident");
   const [editArea, setEditArea] = useState("");
   const { toast } = useToast();
 
@@ -74,9 +74,9 @@ const ManageUsers = () => {
           id: profile.id,
           name: profile.name || 'Unknown',
           email: profile.email || 'No email',
-          role: (profile.role as UserRole) || 'resident',
+          role: (profile.role as "admin" | "official" | "resident") || 'resident',
           area: profile.area,
-          status: "active" // All users are active by default
+          is_active: profile.is_active !== false // Default to true if undefined
         }));
         
         setUsers(mappedUsers);
@@ -112,15 +112,13 @@ const ManageUsers = () => {
       
       if (!userToUpdate) return;
       
-      const newStatus = userToUpdate.status === "active" ? "inactive" : "active";
+      const newStatus = !userToUpdate.is_active;
       
-      // Updated: Actually update the status in the database
+      // Update the status in the database
       const { error } = await supabase
         .from('profiles')
         .update({
-          // Add a custom field for status if needed
-          // is_active: newStatus === "active"
-          // For now we'll just update a field in the UI state
+          is_active: newStatus
         })
         .eq('id', userId);
         
@@ -130,14 +128,14 @@ const ManageUsers = () => {
       setUsers(
         users.map((u) =>
           u.id === userId
-            ? { ...u, status: newStatus }
+            ? { ...u, is_active: newStatus }
             : u
         )
       );
       
       toast({
         title: "Status updated",
-        description: `User ${userToUpdate.name} is now ${newStatus}.`,
+        description: `User ${userToUpdate.name} is now ${newStatus ? 'active' : 'inactive'}.`,
       });
     } catch (error) {
       console.error('Error toggling user status:', error);
@@ -258,7 +256,7 @@ const ManageUsers = () => {
   };
 
   // Role badge color
-  const getRoleBadgeColor = (role: UserRole) => {
+  const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "admin":
         return "bg-purple-500 hover:bg-purple-600";
@@ -361,14 +359,14 @@ const ManageUsers = () => {
                         <TableCell>{user.area || "-"}</TableCell>
                         <TableCell>
                           <Badge
-                            variant={user.status === "active" ? "outline" : "secondary"}
+                            variant={user.is_active ? "outline" : "secondary"}
                             className={
-                              user.status === "active"
+                              user.is_active
                                 ? "text-green-500 border-green-500"
                                 : "text-gray-500"
                             }
                           >
-                            {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                            {user.is_active ? "Active" : "Inactive"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -387,13 +385,13 @@ const ManageUsers = () => {
                               size="icon"
                               className="h-8 w-8"
                               title={
-                                user.status === "active"
+                                user.is_active
                                   ? "Deactivate User"
                                   : "Activate User"
                               }
                               onClick={() => toggleUserStatus(user.id)}
                             >
-                              {user.status === "active" ? (
+                              {user.is_active ? (
                                 <UserX className="h-4 w-4 text-amber-500" />
                               ) : (
                                 <UserCheck className="h-4 w-4 text-green-500" />
@@ -456,7 +454,7 @@ const ManageUsers = () => {
               <label htmlFor="role" className="text-right">
                 Role
               </label>
-              <Select value={editRole} onValueChange={(value) => setEditRole(value as UserRole)}>
+              <Select value={editRole} onValueChange={(value) => setEditRole(value as "admin" | "official" | "resident")}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>

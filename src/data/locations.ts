@@ -1,25 +1,24 @@
-
 export const enuguLocations = [
-  "Ogbete",
-  "Agbani",
-  "Trans-Ekulu",
-  "Akpugo",
-  "GRA",
-  "ShopRite",
-  "Independence Layout",
-  "New Haven",
-  "Coal Camp",
   "Abakpa",
-  "Emene",
-  "Uwani",
   "Achara Layout",
-  "Maryland",
-  "Premier Layout",
+  "Agbani",
+  "Akpugo",
   "Asata",
-  "Ogui",
-  "Obiagu",
+  "Coal Camp",
+  "Emene",
+  "GRA",
   "Idaw River",
-  "Iva Valley"
+  "Independence Layout",
+  "Iva Valley",
+  "Maryland",
+  "New Haven",
+  "Obiagu",
+  "Ogbete",
+  "Ogui",
+  "Premier Layout",
+  "ShopRite",
+  "Trans-Ekulu",
+  "Uwani"
 ];
 
 export default enuguLocations;

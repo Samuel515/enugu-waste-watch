@@ -6,6 +6,7 @@
   ],
   "compilerOptions": {
     "baseUrl": ".",
+    "types": ["https://deno.land/x/deno@v2.3.3/types.d.ts"],
     "paths": {
       "@/*": ["./src/*"]
     },

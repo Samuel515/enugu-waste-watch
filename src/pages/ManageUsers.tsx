@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, UserPlus, Edit, Trash2, UserCheck, UserX } from "lucide-react";
+import { Search, UserPlus, Edit, Trash2, UserCheck, UserX, LoaderCircle } from "lucide-react";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -310,6 +310,7 @@ const ManageUsers = () => {
                   {isLoading ? (
                     <TableRow>
                       <TableCell colSpan={6} className="h-24 text-center">
+                        <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2" />
                         Loading users...
                       </TableCell>
                     </TableRow>

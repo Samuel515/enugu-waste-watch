@@ -240,7 +240,7 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
     { 
       title: "Next Collection", 
       value: nextCollection ? nextCollection.time : "N/A", 
-      description: hasCollectionToday ? "Collection scheduled today!" : "Scheduled time for pickup", 
+      description: hasCollectionToday ? "Time for next scheduled collection" : "Scheduled time for pickup", 
       icon: <Clock className="h-5 w-5" />,
       color: hasCollectionToday ? "waste-red" : "waste-green",
       isLoading: isLoadingCollection

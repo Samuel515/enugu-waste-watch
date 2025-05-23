@@ -1,7 +1,7 @@
 
 import { ReactNode, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowUpRight, Truck, AlertTriangle, Calendar, Clock, LoaderCircle } from "lucide-react";
+import { ArrowUpRight, Truck, AlertTriangle, Calendar, Clock, LoaderCircle, CircleCheckBig } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -259,7 +259,7 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
     { 
       title: "Collections Today", 
       value: isLoadingOfficialStats ? "..." : collectionsToday, 
-      description: "Scheduled waste pickups", 
+      description: "Remaining collections for today", 
       icon: <Truck className="h-5 w-5" />,
       color: "waste-green",
       isLoading: isLoadingOfficialStats
@@ -267,8 +267,8 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
     { 
       title: "Areas Covered", 
       value: isLoadingOfficialStats ? "..." : areasCovered, 
-      description: "Number of completed collection for today", 
-      icon: <Calendar className="h-5 w-5" />,
+      description: "Completed collections for today", 
+      icon: <CircleCheckBig className="h-5 w-5" />,
       color: "waste-blue",
       isLoading: isLoadingOfficialStats
     },

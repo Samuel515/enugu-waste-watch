@@ -331,7 +331,7 @@ const ManageUsers = () => {
                   {isLoading ? (
                     <TableRow>
                       <TableCell colSpan={6} className="h-24 text-center">
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center flex-col">
                           <Loader2 className="h-6 w-6 animate-spin mr-2" />
                           Loading users...
                         </div>

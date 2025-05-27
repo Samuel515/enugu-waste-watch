@@ -1,43 +1,61 @@
-name: Deploy
+name: Deploy to GitHub Pages and Deno Deploy
+
 on:
   push:
-    branches: main
+    branches: [main]
   pull_request:
-    branches: main
+    branches: [main]
 
 jobs:
-  deploy:
-    name: Deploy
+  test:
     runs-on: ubuntu-latest
-
-    permissions:
-      id-token: write # Needed for auth with Deno Deploy
-      contents: read # Needed to clone the repository
-
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
-
       - name: Install Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
-
+          deno-version: v1.46.3
+      - name: Run Deno tests
+        run: deno test --allow-net --allow-env
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
+      - name: Set environment variables
+        run: |
+          echo "VITE_BASE_URL=${{ vars.VITE_BASE_URL || '/' }}" >> $GITHUB_ENV
+          echo "VITE_SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
+          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
+      - name: Install frontend dependencies
+        run: npm install
+      - name: Build frontend
+        run: npm run build
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
 
-      - name: Install step
-        run: "npm install"
-
-      - name: Build step
-        run: "npm run build"
-
-      - name: Upload to Deno Deploy
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      pages: write
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v1.46.3
+      - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: "enugu-waste-watch"
-          entrypoint: "https://deno.land/std@0.217.0/http/file_server.ts"
-          root: "dist"
-    
+          project: enugu-waste-watch
+          entrypoint: supabase/functions/check-email-exists/index.ts
+          root: .
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

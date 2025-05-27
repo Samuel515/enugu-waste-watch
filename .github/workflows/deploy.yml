@@ -15,7 +15,7 @@ jobs:
       - name: Install Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.46.3
+          deno-version: v2.3.3
       - name: Run Deno tests
         run: deno test --allow-net --allow-env
       - name: Install Node.js

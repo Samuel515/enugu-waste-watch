@@ -28,7 +28,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
       - name: Build frontend
-        run: npm run build
+        run: |
+          npm run build || { echo "Build failed"; exit 1; }
+          ls -la dist || { echo "dist folder not found"; exit 1; }
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

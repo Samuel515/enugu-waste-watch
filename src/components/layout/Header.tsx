@@ -53,12 +53,12 @@ const Header = () => {
           {isAuthenticatedPage ? (
             <div className="flex items-center gap-2">
               <Leaf className="h-6 w-6 text-waste-green" />
-              <span className="text-lg font-bold xs:text-xs sm:text-sm md:text-lg lg:text-xl">EWW</span>
+              <span className="text-lg font-bold xs:text-xs sm:text-sm md:text-lg lg:text-xl">Enugu Waste Watch</span>
             </div>
           ) : (
             <Link to="/" className="flex items-center gap-2">
               <Leaf className="h-6 w-6 text-waste-green" />
-              <span className="text-lg font-bold xs:text-xs sm:text-sm md:text-lg lg:text-xl">EWW</span>
+              <span className="text-lg font-bold xs:text-xs sm:text-sm md:text-lg lg:text-xl">Enugu Waste Watch</span>
             </Link>
           )}
         </div>

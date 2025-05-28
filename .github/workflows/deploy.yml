@@ -35,7 +35,6 @@ jobs:
           path: ./dist
 
   deploy:
-    needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
@@ -47,13 +46,13 @@ jobs:
       - name: Install Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.46.3
+          deno-version: v2.3.3
       - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1
         with:
-          project: enugu-waste-watch
-          entrypoint: supabase/functions/check-email-exists/index.ts
-          root: .
+          project: "enugu-waste-watch"
+          entrypoint: "https://deno.land/std@0.217.0/http/file_server.ts"
+          root: "dist"
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

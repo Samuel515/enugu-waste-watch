@@ -41,17 +41,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const auth = useAuthService();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth event:', event);
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        // Get initial session first
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        auth.setSession(session);
+        if (error) {
+          console.error('Error getting session:', error);
+          if (mounted) {
+            setIsInitializing(false);
+          }
+          return;
+        }
         
-        if (session?.user) {
+        if (session?.user && mounted) {
+          auth.setSession(session);
+          
           try {
             const profile = await auth.fetchUserProfile(session.user.id);
             
-            if (profile) {
+            if (profile && mounted) {
               const userEmail = session.user.email || '';
               
               setAppUser({
@@ -66,45 +77,71 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
           } catch (error) {
             console.error('Error fetching user profile:', error);
+            if (mounted) {
+              setAppUser(null);
+              auth.setUser(null);
+            }
+          }
+        }
+        
+        if (mounted) {
+          setIsInitializing(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setIsInitializing(false);
+        }
+      }
+    };
+
+    // Initialize auth
+    initializeAuth();
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth event:', event);
+        
+        if (!mounted) return;
+        
+        auth.setSession(session);
+        
+        if (session?.user) {
+          try {
+            const profile = await auth.fetchUserProfile(session.user.id);
+            
+            if (profile && mounted) {
+              const userEmail = session.user.email || '';
+              
+              setAppUser({
+                id: profile.id,
+                name: profile.name || '',
+                email: profile.email || userEmail,
+                role: profile.role as UserRole,
+                area: profile.area
+              });
+
+              auth.setUser(session.user);
+            }
+          } catch (error) {
+            console.error('Error fetching user profile:', error);
+            if (mounted) {
+              setAppUser(null);
+              auth.setUser(null);
+            }
+          }
+        } else {
+          if (mounted) {
             setAppUser(null);
             auth.setUser(null);
           }
-        } else {
-          setAppUser(null);
-          auth.setUser(null);
         }
-        
-        setIsInitializing(false);
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      auth.setSession(session);
-      
-      if (session?.user) {
-        auth.fetchUserProfile(session.user.id).then(profile => {
-          if (profile) {
-            const userEmail = session.user.email || '';
-            
-            setAppUser({
-              id: profile.id,
-              name: profile.name || '',
-              email: profile.email || userEmail,
-              role: profile.role as UserRole,
-              area: profile.area
-            });
-
-            auth.setUser(session.user);
-          }
-          setIsInitializing(false);
-        });
-      } else {
-        setIsInitializing(false);
-      }
-    });
-
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);

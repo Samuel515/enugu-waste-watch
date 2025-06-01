@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ const Notifications = () => {
           setLocalReadIds(parsedIds);
         } catch (e) {
           console.error("Error parsing stored read notifications:", e);
+          // Reset if there was an error
           localStorage.removeItem(`${READ_NOTIFICATIONS_KEY}_${user.id}`);
         }
       }
@@ -54,11 +56,7 @@ const Notifications = () => {
   // Fetch notifications from Supabase with efficient filtering
   useEffect(() => {
     const fetchNotifications = async () => {
-      // Don't fetch if user is not available yet
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
+      if (!user) return;
       
       setIsLoading(true);
       
@@ -69,7 +67,7 @@ const Notifications = () => {
           .select('*')
           .order('created_at', { ascending: false });
         
-        // Apply role-specific filters - add null checks
+        // Apply role-specific filters
         if (user.role === 'official' || user.role === 'admin') {
           // Officials & admins see notifications meant for their role, all users, or specifically for them
           query = query.or(`for_user_id.eq.${user.id},for_all.eq.true,recipient_role.eq.${user.role}`);
@@ -117,9 +115,7 @@ const Notifications = () => {
     
     fetchNotifications();
 
-    // Set up realtime subscription for new notifications - only if user exists
-    if (!user) return;
-
+    // Set up realtime subscription for new notifications
     const channel = supabase
       .channel('notification-updates')
       .on('postgres_changes', 
@@ -142,7 +138,6 @@ const Notifications = () => {
   // Fetch upcoming collections separately
   useEffect(() => {
     const fetchUpcomingCollections = async () => {
-      // Don't fetch if user or user.area is not available yet
       if (!user?.area) return;
       
       try {
@@ -278,19 +273,6 @@ const Notifications = () => {
     // that don't need to be marked as read in the database
     return Promise.resolve();
   };
-
-  // Show loading state if user is still being fetched
-  if (!user) {
-    return (
-      <Layout requireAuth>
-        <div className="container py-8">
-          <div className="flex justify-center items-center py-10">
-            <LoaderCircle className="h-8 w-8 text-waste-green animate-spin" />
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout requireAuth>

@@ -37,12 +37,48 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const auth = useAuthService();
+
+  const handleUserProfile = async (session: Session | null) => {
+    if (session?.user) {
+      console.log('Fetching user profile for:', session.user.id);
+      
+      try {
+        const profile = await auth.fetchUserProfile(session.user.id);
+        
+        if (profile) {
+          console.log('Profile fetched successfully:', profile);
+          
+          setAppUser({
+            id: profile.id,
+            name: profile.name || '',
+            email: profile.email || session.user.email || '',
+            role: profile.role as UserRole,
+            area: profile.area
+          });
+
+          auth.setUser(session.user);
+        } else {
+          console.log('No profile found');
+          setAppUser(null);
+          auth.setUser(null);
+        }
+      } catch (profileError) {
+        console.error('Error fetching user profile:', profileError);
+        setAppUser(null);
+        auth.setUser(null);
+      }
+    } else {
+      console.log('No user in session');
+      setAppUser(null);
+      auth.setUser(null);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
-
+    
     const initializeAuth = async () => {
       try {
         console.log('Starting auth initialization...');
@@ -52,53 +88,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         if (error) {
           console.error('Error getting session:', error);
-          if (mounted) {
-            setIsInitializing(false);
-          }
-          return;
-        }
-
-        console.log('Initial session:', session ? 'exists' : 'none');
-        
-        // Set session in auth service
-        auth.setSession(session);
-        
-        if (session?.user) {
-          console.log('User found in session, fetching profile...');
-          
-          try {
-            const profile = await auth.fetchUserProfile(session.user.id);
-            
-            if (profile && mounted) {
-              console.log('Profile fetched successfully:', profile);
-              
-              setAppUser({
-                id: profile.id,
-                name: profile.name || '',
-                email: profile.email || session.user.email || '',
-                role: profile.role as UserRole,
-                area: profile.area
-              });
-
-              auth.setUser(session.user);
-            } else if (mounted) {
-              console.log('No profile found, clearing user state');
-              setAppUser(null);
-              auth.setUser(null);
-            }
-          } catch (profileError) {
-            console.error('Error fetching user profile:', profileError);
-            if (mounted) {
-              setAppUser(null);
-              auth.setUser(null);
-            }
-          }
         } else {
-          console.log('No user in session, clearing state');
-          if (mounted) {
-            setAppUser(null);
-            auth.setUser(null);
-          }
+          console.log('Initial session:', session ? 'exists' : 'none');
+          
+          // Set session in auth service
+          auth.setSession(session);
+          
+          // Handle user profile
+          await handleUserProfile(session);
         }
         
       } catch (error) {
@@ -106,13 +103,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } finally {
         if (mounted) {
           console.log('Auth initialization complete');
-          setIsInitializing(false);
+          setIsInitialized(true);
         }
       }
     };
-
-    // Initialize auth immediately
-    initializeAuth();
 
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -124,39 +118,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Update auth service state
         auth.setSession(session);
         
-        if (session?.user) {
-          try {
-            const profile = await auth.fetchUserProfile(session.user.id);
-            
-            if (profile && mounted) {
-              setAppUser({
-                id: profile.id,
-                name: profile.name || '',
-                email: profile.email || session.user.email || '',
-                role: profile.role as UserRole,
-                area: profile.area
-              });
-
-              auth.setUser(session.user);
-            } else if (mounted) {
-              setAppUser(null);
-              auth.setUser(null);
-            }
-          } catch (error) {
-            console.error('Error fetching user profile in auth change:', error);
-            if (mounted) {
-              setAppUser(null);
-              auth.setUser(null);
-            }
-          }
-        } else {
-          if (mounted) {
-            setAppUser(null);
-            auth.setUser(null);
-          }
+        // Handle user profile
+        await handleUserProfile(session);
+        
+        // Mark as initialized if not already
+        if (!isInitialized) {
+          setIsInitialized(true);
         }
       }
     );
+
+    // Initialize auth
+    initializeAuth();
 
     return () => {
       console.log('Cleaning up auth context');
@@ -166,7 +139,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   // Show loading spinner while initializing
-  if (isInitializing) {
+  if (!isInitialized) {
     console.log('Auth context still initializing...');
     return (
       <div className="flex items-center justify-center min-h-screen">

@@ -37,29 +37,70 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   const auth = useAuthService();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth event:', event);
         
         auth.setSession(session);
         
         if (session?.user) {
-          fetchUserProfile(session.user.id);
+          try {
+            const profile = await auth.fetchUserProfile(session.user.id);
+            
+            if (profile) {
+              const userEmail = session.user.email || '';
+              
+              setAppUser({
+                id: profile.id,
+                name: profile.name || '',
+                email: profile.email || userEmail,
+                role: profile.role as UserRole,
+                area: profile.area
+              });
+
+              auth.setUser(session.user);
+            }
+          } catch (error) {
+            console.error('Error fetching user profile:', error);
+            setAppUser(null);
+            auth.setUser(null);
+          }
         } else {
           setAppUser(null);
           auth.setUser(null);
         }
+        
+        setIsInitializing(false);
       }
     );
 
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       auth.setSession(session);
       
       if (session?.user) {
-        fetchUserProfile(session.user.id);
+        auth.fetchUserProfile(session.user.id).then(profile => {
+          if (profile) {
+            const userEmail = session.user.email || '';
+            
+            setAppUser({
+              id: profile.id,
+              name: profile.name || '',
+              email: profile.email || userEmail,
+              role: profile.role as UserRole,
+              area: profile.area
+            });
+
+            auth.setUser(session.user);
+          }
+          setIsInitializing(false);
+        });
+      } else {
+        setIsInitializing(false);
       }
     });
 
@@ -68,23 +109,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
-    const profile = await auth.fetchUserProfile(userId);
-    
-    if (profile) {
-      const userEmail = auth.session?.user?.email || '';
-      
-      setAppUser({
-        id: profile.id,
-        name: profile.name || '',
-        email: profile.email || userEmail,
-        role: profile.role as UserRole,
-        area: profile.area
-      });
-
-      auth.setUser(auth.session?.user || null);
-    }
-  };
+  // Don't render children until auth state is determined
+  if (isInitializing) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-waste-green"></div>
+    </div>;
+  }
 
   const value = {
     user: appUser,

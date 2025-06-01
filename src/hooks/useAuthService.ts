@@ -120,7 +120,7 @@ export const useAuthService = () => {
             role,
             area,
           },
-          emailRedirectTo: `${window.location.origin}/auth?tab=login&reason=email-verification`,
+          emailRedirectTo: `https://enuguwaste.com.ng/auth?tab=login&reason=email-verification`,
         },
       });
       
@@ -160,7 +160,7 @@ export const useAuthService = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `https://enuguwaste.com.ng/dashboard`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -189,7 +189,7 @@ export const useAuthService = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `https://enuguwaste.com.ng/dashboard`
         }
       });
       

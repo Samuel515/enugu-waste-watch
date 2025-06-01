@@ -184,31 +184,6 @@ export const useAuthService = () => {
     }
   };
 
-  const signInWithApple = async () => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: `https://enuguwaste.com.ng/dashboard`
-        }
-      });
-      
-      if (error) {
-        toast({
-          title: "Apple login failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        throw error;
-      }
-      
-      console.log('Apple auth initiated:', data);
-    } catch (error: any) {
-      console.error("Apple login error:", error);
-      throw error;
-    }
-  };
-
   const logout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -247,7 +222,6 @@ export const useAuthService = () => {
     login,
     signupWithEmail,
     signInWithGoogle,
-    signInWithApple,
     logout
   };
 };

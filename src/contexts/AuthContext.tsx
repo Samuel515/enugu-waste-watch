@@ -28,7 +28,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signupWithEmail: (name: string, email: string, password: string, role: UserRole, area?: string, verificationCode?: string) => Promise<SignupResult>;
   signInWithGoogle: () => Promise<void>;
-  signInWithApple: () => Promise<void>;
   logout: () => Promise<void>;
   checkEmailExists: (email: string) => Promise<boolean>;
 }
@@ -93,7 +92,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     login: auth.login,
     signupWithEmail: auth.signupWithEmail,
     signInWithGoogle: auth.signInWithGoogle,
-    signInWithApple: auth.signInWithApple,
     logout: auth.logout,
     checkEmailExists: auth.checkEmailExists
   };

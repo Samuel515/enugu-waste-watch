@@ -1,3 +1,4 @@
+
 import { createContext, useState, useContext, useEffect, ReactNode } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,7 +31,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   // Load locally stored read notification IDs
   useEffect(() => {
-    if (user?.id) {
+    if (user) {
       const storedReadIds = localStorage.getItem(`${READ_NOTIFICATIONS_KEY}_${user.id}`);
       if (storedReadIds) {
         try {
@@ -42,7 +43,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     }
-  }, [user?.id]);
+  }, [user]);
 
   // Function to check if there's a collection scheduled for today
   const checkTodayCollection = async () => {
@@ -130,14 +131,13 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   // Refresh notifications count and check collections
   const refreshNotifications = async () => {
-    // Don't proceed if user is not available yet
-    if (!user?.id || !user?.role) return;
+    if (!user) return;
     
     try {
       // Prepare the query filters based on user role
       let query = supabase.from('notifications').select('id');
       
-      // Filter notifications based on user role and id - add null checks
+      // Filter notifications based on user role and id
       if (user.role === 'official' || user.role === 'admin') {
         // Officials & admins see notifications meant for their role or all users or specifically for them
         query = query.or(`for_user_id.eq.${user.id},for_all.eq.true,recipient_role.eq.${user.role}`);
@@ -172,8 +172,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   // Set up a listener for new reports to create notifications (now handled by database trigger)
   useEffect(() => {
-    // Don't set up listeners if user is not available yet
-    if (!user?.id || !user?.role) return;
+    if (!user) return;
 
     // Refresh notifications on mount and when user or local read IDs change
     refreshNotifications();
@@ -193,7 +192,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       supabase.removeChannel(channel);
       clearInterval(intervalId);
     };
-  }, [user?.id, user?.role, localReadIds]);
+  }, [user, localReadIds]);
 
   return (
     <NotificationContext.Provider value={{

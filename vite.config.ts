@@ -29,12 +29,13 @@ export default defineConfig(({ mode }) => {
           manualChunks: undefined,
         },
       },
+      outDir: "dist",
     },
     preview: {
       port: 8080,
       host: "::",
     },
-    // Configure SPA fallback for routing
+    // Configure SPA fallback for routing (development only)
     appType: 'spa',
   };
 });

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,7 @@ interface Notification {
 const READ_NOTIFICATIONS_KEY = "enugu_waste_read_notifications";
 
 const Notifications = () => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -35,6 +34,35 @@ const Notifications = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [localReadIds, setLocalReadIds] = useState<string[]>([]);
   const [upcomingCollections, setUpcomingCollections] = useState<any[]>([]);
+  
+  // Early return if auth is still loading
+  if (authLoading) {
+    return (
+      <Layout requireAuth>
+        <div className="container py-8">
+          <div className="text-center py-10">
+            <div className="flex flex-col items-center justify-center">
+              <LoaderCircle className="h-8 w-8 text-waste-green animate-spin mb-2" />
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Early return if user is null
+  if (!user) {
+    return (
+      <Layout requireAuth>
+        <div className="container py-8">
+          <div className="text-center py-10">
+            <p className="text-muted-foreground">Please log in to view notifications.</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
   
   // Load locally stored read notification IDs
   useEffect(() => {
@@ -56,7 +84,7 @@ const Notifications = () => {
   // Fetch notifications from Supabase with efficient filtering
   useEffect(() => {
     const fetchNotifications = async () => {
-      if (!user) return;
+      if (!user?.role) return;
       
       setIsLoading(true);
       

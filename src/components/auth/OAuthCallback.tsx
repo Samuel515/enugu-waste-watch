@@ -29,7 +29,7 @@ const OAuthCallback = () => {
               access_token: accessToken,
               refresh_token: refreshToken,
             });
-            
+
             if (error) {
               console.error('Error setting session:', error);
               toast({
@@ -40,17 +40,17 @@ const OAuthCallback = () => {
               navigate('/auth');
               return;
             }
-            
-            if (data.session) {
+
+            if (data && data.session) {
               console.log('OAuth authentication successful');
               toast({
                 title: "Login Successful",
                 description: "Welcome! Redirecting to dashboard...",
               });
-              
+
               // Clear the hash from URL
               window.history.replaceState(null, '', window.location.pathname);
-              
+
               // Redirect to dashboard
               navigate('/dashboard');
               return;
@@ -59,8 +59,9 @@ const OAuthCallback = () => {
         }
         
         // If no valid tokens found, check for existing session
-        const { data: { session } } = await supabase.auth.getSession();
-        
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session;
+
         if (session) {
           navigate('/dashboard');
         } else {

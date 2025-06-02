@@ -38,7 +38,7 @@ jobs:
         uses: denoland/deployctl@v1
         with:
           project: "enugu-waste-watch"
-          entrypoint: "https://deno.land/std@0.208.0/http/server.ts"
+          entrypoint: "https://cdn.jsdelivr.net/gh/Samuel515/enugu-waste-watch@main/server.ts"
           root: "dist"
           
           

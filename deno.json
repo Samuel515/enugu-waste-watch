@@ -1,6 +1,13 @@
 
 {
   "tasks": {
-    "start": "deno run --allow-net --allow-read --allow-env server.ts"
+    "start": "deno run --allow-net --allow-read --allow-env server.ts",
+    "dev": "deno run --allow-net --allow-read --allow-env --watch server.ts"
+  },
+  "deploy": {
+    "project": "enugu-waste-watch",
+    "entrypoint": "./server.ts",
+    "include": ["./dist/", "./server.ts"],
+    "exclude": ["node_modules/", ".git/", "src/"]
   }
 }

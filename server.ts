@@ -7,26 +7,58 @@ const port = Number(Deno.env.get("PORT")) || 8080;
 async function handler(request: Request): Promise<Response> {
   const url = new URL(request.url);
   
-  // Try to serve the requested file
-  const response = await serveDir(request, {
-    fsRoot: "./dist",
-    quiet: true,
-  });
+  console.log(`Request: ${request.method} ${url.pathname}`);
   
-  // If file not found and it's not an API route, serve index.html (SPA fallback)
-  if (response.status === 404 && !url.pathname.startsWith("/api/")) {
-    try {
-      const indexFile = await Deno.readFile("./dist/index.html");
-      return new Response(indexFile, {
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
-    } catch {
-      return new Response("Not Found", { status: 404 });
+  // Try to serve static files first
+  try {
+    const response = await serveDir(request, {
+      fsRoot: "./dist",
+      quiet: true,
+    });
+    
+    // If file exists and is found, serve it
+    if (response.status !== 404) {
+      console.log(`Serving static file: ${url.pathname}`);
+      return response;
     }
+  } catch (error) {
+    console.error("Error serving static file:", error);
   }
   
-  return response;
+  // For all other routes (SPA fallback), serve index.html
+  try {
+    console.log(`SPA fallback for: ${url.pathname}`);
+    const indexFile = await Deno.readFile("./dist/index.html");
+    return new Response(indexFile, {
+      status: 200,
+      headers: { 
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-cache"
+      },
+    });
+  } catch (error) {
+    console.error("Error reading index.html:", error);
+    return new Response("Application files not found. Please ensure the app is built correctly.", { 
+      status: 404,
+      headers: { "content-type": "text/plain" }
+    });
+  }
 }
 
-console.log(`Server running on port ${port}`);
+console.log(`Server starting on port ${port}`);
+console.log(`Serving files from: ./dist`);
+
+// Check if dist directory exists
+try {
+  const distInfo = await Deno.stat("./dist");
+  console.log(`Dist directory exists: ${distInfo.isDirectory}`);
+  
+  // Check if index.html exists
+  const indexInfo = await Deno.stat("./dist/index.html");
+  console.log(`Index.html exists: ${indexInfo.isFile}`);
+} catch (error) {
+  console.error("Warning: Could not verify dist directory or index.html:", error.message);
+  console.log("Make sure to run 'npm run build' before starting the server");
+}
+
 await serve(handler, { port });

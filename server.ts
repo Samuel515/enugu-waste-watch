@@ -1,5 +1,4 @@
 
-import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { serveDir } from "https://deno.land/std@0.208.0/http/file_server.ts";
 
 const port = Number(Deno.env.get("PORT")) || 8080;
@@ -61,4 +60,5 @@ try {
   console.log("Make sure to run 'npm run build' before starting the server");
 }
 
-await serve(handler, { port });
+// Use modern Deno.serve API (compatible with Deno Deploy)
+Deno.serve({ port }, handler);

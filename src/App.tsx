@@ -1,4 +1,3 @@
-
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -6,6 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ScrollToTop from "@/components/common/ScrollToTop";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import OAuthCallback from "@/components/auth/OAuthCallback";
 
 // Pages
 import Index from "./pages/Index";
@@ -31,6 +31,19 @@ import UpdateSchedules from "./pages/UpdateSchedules";
 
 const queryClient = new QueryClient();
 
+// OAuth Callback Route Component
+const OAuthCallbackRoute = () => {
+  // Check if this is an OAuth callback (has hash with tokens)
+  if (window.location.hash && 
+      (window.location.hash.includes('access_token') || 
+       window.location.hash.includes('refresh_token'))) {
+    return <OAuthCallback />;
+  }
+  
+  // Otherwise, render the normal dashboard
+  return <Dashboard />;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -43,7 +56,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<OAuthCallbackRoute />} />
                   <Route path="/report" element={<Report />} />
                   <Route path="/reports" element={<Reports />} />
                   <Route path="/schedule" element={<Schedule />} />

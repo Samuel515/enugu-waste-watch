@@ -23,7 +23,7 @@ export const NotificationContext = createContext<NotificationContextType>({
 const READ_NOTIFICATIONS_KEY = "enugu_waste_read_notifications";
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [hasCollectionToday, setHasCollectionToday] = useState(false);
@@ -131,7 +131,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   // Refresh notifications count and check collections
   const refreshNotifications = async () => {
-    if (!user) return;
+    if (!user?.role || authLoading) return;
     
     try {
       // Prepare the query filters based on user role
@@ -172,7 +172,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   // Set up a listener for new reports to create notifications (now handled by database trigger)
   useEffect(() => {
-    if (!user) return;
+    if (!user || authLoading) return;
 
     // Refresh notifications on mount and when user or local read IDs change
     refreshNotifications();
@@ -192,7 +192,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       supabase.removeChannel(channel);
       clearInterval(intervalId);
     };
-  }, [user, localReadIds]);
+  }, [user, localReadIds, authLoading]);
 
   return (
     <NotificationContext.Provider value={{

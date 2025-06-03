@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setIsLoading(false);
             setAuthInitialized(true);
           }
-        }, 10000); // 10 second timeout
+        }, 10000); // 10 seconds timeout
 
         // Check for existing session
         const { data: { session }, error } = await supabase.auth.getSession();

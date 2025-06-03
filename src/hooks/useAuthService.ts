@@ -87,6 +87,11 @@ export const useAuthService = () => {
       const intendedUrl = localStorage.getItem('intendedUrl');
       localStorage.removeItem('intendedUrl');
       const redirectUrl = intendedUrl || '/dashboard';
+
+      if (redirectUrl === '/dashboard') {
+        window.location.href = '/dashboard';
+        return;
+      }
       
       console.log('Login: Redirecting to:', redirectUrl);
       navigate(redirectUrl);
@@ -220,7 +225,7 @@ export const useAuthService = () => {
         description: "You have been logged out successfully"
       });
       
-      navigate("/");
+      window.location.href = "/";
     } catch (error: any) {
       console.error("Logout error:", error);
       throw error;

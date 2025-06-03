@@ -36,9 +36,14 @@ const ScheduleCalendar = () => {
         const { data, error } = await supabase
           .from('pickup_schedules')
           .select('*')
-          .order('pickup_date', { ascending: true }) as any;
+          .order('pickup_date', { ascending: true });
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching pickup schedules:', error);
+          throw error;
+        }
+        
+        console.log('Fetched schedule data:', data);
         
         if (data) {
           const formattedEvents: CollectionEvent[] = data.map((item: any) => ({

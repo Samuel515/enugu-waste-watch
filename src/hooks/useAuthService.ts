@@ -83,18 +83,8 @@ export const useAuthService = () => {
         description: "Welcome back!",
       });
       
-      // Get intended URL or default to dashboard
-      const intendedUrl = localStorage.getItem('intendedUrl');
-      localStorage.removeItem('intendedUrl');
-      const redirectUrl = intendedUrl || '/dashboard';
-
-      if (redirectUrl === '/dashboard') {
-        window.location.href = '/dashboard';
-        return;
-      }
-      
-      console.log('Login: Redirecting to:', redirectUrl);
-      navigate(redirectUrl);
+      // Don't redirect here - let the auth state change handler handle it
+      console.log('Login successful, waiting for auth state change...');
     } catch (error: any) {
       console.error("Login error:", error);
       throw error;

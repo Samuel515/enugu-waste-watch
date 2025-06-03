@@ -15,7 +15,7 @@ const Layout = ({ children, requireAuth = false, allowedRoles = [] }: LayoutProp
   const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
   
-  // Show loading while auth is being checked
+  // Show loading while auth is being checked for protected routes
   if (isLoading && requireAuth) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -25,19 +25,19 @@ const Layout = ({ children, requireAuth = false, allowedRoles = [] }: LayoutProp
   }
   
   // Check if authentication is required but user is not authenticated
-  if (requireAuth && !isAuthenticated) {
+  if (requireAuth && !isAuthenticated && !isLoading) {
     // Store the current path for redirect after login
     const currentPath = location.pathname + location.search + location.hash;
     if (currentPath !== '/auth' && currentPath !== '/') {
       localStorage.setItem('intendedUrl', currentPath);
       console.log('Layout: Storing intended URL before redirect:', currentPath);
     }
-    return <Navigate to="/auth" />;
+    return <Navigate to="/auth" replace />;
   }
 
   // Check if user role is allowed to access this page
   if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (

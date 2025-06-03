@@ -55,12 +55,14 @@ const OAuthCallback = () => {
               // Get intended URL or default to dashboard
               const intendedUrl = localStorage.getItem('intendedUrl');
               localStorage.removeItem('intendedUrl');
-              const redirectUrl = intendedUrl || '/dashboard';
               
-              console.log('OAuth: Redirecting to:', redirectUrl);
-              
-              // Use window.location.href for more reliable redirect
-              window.location.href = redirectUrl;
+              if (intendedUrl && intendedUrl !== '/auth') {
+                console.log('OAuth: Redirecting to intended URL:', intendedUrl);
+                window.location.href = intendedUrl;
+              } else {
+                console.log('OAuth: Redirecting to dashboard');
+                window.location.href = '/dashboard';
+              }
               return;
             }
           }
@@ -73,9 +75,14 @@ const OAuthCallback = () => {
         if (session) {
           const intendedUrl = localStorage.getItem('intendedUrl');
           localStorage.removeItem('intendedUrl');
-          const redirectUrl = intendedUrl || '/dashboard';
-          console.log('Existing session found, redirecting to:', redirectUrl);
-          window.location.href = redirectUrl;
+          
+          if (intendedUrl && intendedUrl !== '/auth') {
+            console.log('Existing session found, redirecting to intended URL:', intendedUrl);
+            window.location.href = intendedUrl;
+          } else {
+            console.log('Existing session found, redirecting to dashboard');
+            window.location.href = '/dashboard';
+          }
         } else {
           console.log('No session found, redirecting to auth');
           navigate('/auth');

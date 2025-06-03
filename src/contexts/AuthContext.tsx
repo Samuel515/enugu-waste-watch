@@ -65,14 +65,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         console.log('Starting auth initialization...');
         
-        // Set a timeout to prevent hanging
+        // Set a timeout to prevent hanging - reduced to 5 seconds
         timeoutId = window.setTimeout(() => {
           if (mounted && !authInitialized) {
             console.warn('Auth initialization timeout, proceeding without session');
             setIsLoading(false);
             setAuthInitialized(true);
           }
-        }, 10000); // 10 seconds timeout
+        }, 5000); // 5 seconds timeout
 
         // Check for existing session
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -126,12 +126,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         if (!mounted) return;
 
-        // Don't process events until initial auth is complete
-        if (!authInitialized && event !== 'INITIAL_SESSION') {
-          console.log('Ignoring auth event until initialization complete');
-          return;
-        }
-
         auth.setSession(session);
         
         if (session?.user) {
@@ -139,13 +133,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           await fetchUserProfile(session.user.id);
           
           // Handle redirect after successful authentication
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (event === 'SIGNED_IN') {
             // Small delay to ensure profile is loaded
             setTimeout(() => {
               const intendedUrl = getAndClearIntendedUrl();
-              const redirectUrl = intendedUrl || '/dashboard';
-              console.log('Redirecting to:', redirectUrl);
-              window.location.href = redirectUrl;
+              if (intendedUrl && intendedUrl !== '/auth') {
+                console.log('Redirecting to intended URL:', intendedUrl);
+                window.location.href = intendedUrl;
+              } else {
+                console.log('Redirecting to dashboard');
+                window.location.href = '/dashboard';
+              }
             }, 100);
           }
         } else {
@@ -159,9 +157,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         }
         
-        if (isLoading) {
-          setIsLoading(false);
-        }
+        // Ensure loading is set to false after auth state changes
+        setIsLoading(false);
+        setAuthInitialized(true);
       }
     );
 

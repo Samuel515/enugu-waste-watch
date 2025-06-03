@@ -40,9 +40,14 @@ const PickupSchedule = () => {
           .gte('pickup_date', now)
           .eq('status', 'scheduled')
           .order('pickup_date', { ascending: true })
-          .limit(3) as any;
+          .limit(3);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching pickup schedules:', error);
+          throw error;
+        }
+        
+        console.log('Fetched pickup schedules:', data);
         
         if (data) {
           setUpcomingPickups(data);
@@ -50,7 +55,7 @@ const PickupSchedule = () => {
           // Find the next pickup for user's area if user has an area set
           if (user && user.area) {
             const userAreaPickups = data.filter((pickup: PickupScheduleItem) => 
-              pickup.area.toLowerCase() === user.area.toLowerCase()
+              pickup.area.toLowerCase() === user.area?.toLowerCase()
             );
             
             if (userAreaPickups.length > 0) {
@@ -74,7 +79,10 @@ const PickupSchedule = () => {
       }
     };
     
-    fetchPickupSchedules();
+    // Only fetch if user is authenticated
+    if (user) {
+      fetchPickupSchedules();
+    }
   }, [user, toast]);
 
   const formatPickupDate = (dateStr: string) => {

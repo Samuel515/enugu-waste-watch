@@ -1,6 +1,6 @@
 
 import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -12,10 +12,26 @@ interface LayoutProps {
 }
 
 const Layout = ({ children, requireAuth = false, allowedRoles = [] }: LayoutProps) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+  
+  // Show loading while auth is being checked
+  if (isLoading && requireAuth) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-waste-green"></div>
+      </div>
+    );
+  }
   
   // Check if authentication is required but user is not authenticated
   if (requireAuth && !isAuthenticated) {
+    // Store the current path for redirect after login
+    const currentPath = location.pathname + location.search + location.hash;
+    if (currentPath !== '/auth' && currentPath !== '/') {
+      localStorage.setItem('intendedUrl', currentPath);
+      console.log('Layout: Storing intended URL before redirect:', currentPath);
+    }
     return <Navigate to="/auth" />;
   }
 

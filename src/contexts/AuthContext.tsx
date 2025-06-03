@@ -38,39 +38,83 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const auth = useAuthService();
+
+  // Store the intended URL when user tries to access a protected route
+  const storeIntendedUrl = () => {
+    const currentPath = window.location.pathname + window.location.search + window.location.hash;
+    if (currentPath !== '/auth' && currentPath !== '/') {
+      localStorage.setItem('intendedUrl', currentPath);
+      console.log('Stored intended URL:', currentPath);
+    }
+  };
+
+  // Get and clear the stored URL
+  const getAndClearIntendedUrl = () => {
+    const storedUrl = localStorage.getItem('intendedUrl');
+    localStorage.removeItem('intendedUrl');
+    return storedUrl;
+  };
 
   useEffect(() => {
     let mounted = true;
+    let timeoutId: number;
 
     const initializeAuth = async () => {
       try {
-        // Check for existing session first
+        console.log('Starting auth initialization...');
+        
+        // Set a timeout to prevent hanging
+        timeoutId = window.setTimeout(() => {
+          if (mounted && !authInitialized) {
+            console.warn('Auth initialization timeout, proceeding without session');
+            setIsLoading(false);
+            setAuthInitialized(true);
+          }
+        }, 10000); // 10 second timeout
+
+        // Check for existing session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
           if (mounted) {
             setIsLoading(false);
+            setAuthInitialized(true);
           }
           return;
         }
+
+        console.log('Session check complete:', session ? 'Session found' : 'No session');
 
         if (mounted) {
           auth.setSession(session);
           
           if (session?.user) {
+            console.log('User found in session, fetching profile...');
             await fetchUserProfile(session.user.id);
           } else {
             setAppUser(null);
             auth.setUser(null);
           }
+          
           setIsLoading(false);
+          setAuthInitialized(true);
+          
+          // Clear the timeout since we completed successfully
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         if (mounted) {
           setIsLoading(false);
+          setAuthInitialized(true);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
         }
       }
     };
@@ -82,13 +126,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         if (!mounted) return;
 
+        // Don't process events until initial auth is complete
+        if (!authInitialized && event !== 'INITIAL_SESSION') {
+          console.log('Ignoring auth event until initialization complete');
+          return;
+        }
+
         auth.setSession(session);
         
         if (session?.user) {
+          console.log('Auth state change: User signed in, fetching profile...');
           await fetchUserProfile(session.user.id);
+          
+          // Handle redirect after successful authentication
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            // Small delay to ensure profile is loaded
+            setTimeout(() => {
+              const intendedUrl = getAndClearIntendedUrl();
+              const redirectUrl = intendedUrl || '/dashboard';
+              console.log('Redirecting to:', redirectUrl);
+              window.location.href = redirectUrl;
+            }, 100);
+          }
         } else {
+          console.log('Auth state change: User signed out');
           setAppUser(null);
           auth.setUser(null);
+          
+          // Store current URL if user is being redirected to auth
+          if (event === 'SIGNED_OUT') {
+            storeIntendedUrl();
+          }
         }
         
         if (isLoading) {
@@ -102,12 +170,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => {
       mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       subscription.unsubscribe();
     };
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching user profile for:', userId);
       const profile = await auth.fetchUserProfile(userId);
       
       if (profile) {
@@ -122,6 +194,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         auth.setUser(auth.session?.user || null);
+        console.log('User profile loaded successfully');
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);

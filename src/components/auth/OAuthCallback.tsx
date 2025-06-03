@@ -12,6 +12,7 @@ const OAuthCallback = () => {
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
+        console.log('Processing OAuth callback...');
         // Parse the URL hash for OAuth tokens
         const hash = window.location.hash;
         
@@ -45,14 +46,21 @@ const OAuthCallback = () => {
               console.log('OAuth authentication successful');
               toast({
                 title: "Login Successful",
-                description: "Welcome! Redirecting to dashboard...",
+                description: "Welcome! Redirecting...",
               });
 
               // Clear the hash from URL
               window.history.replaceState(null, '', window.location.pathname);
 
-              // Redirect to dashboard
-              navigate('/dashboard');
+              // Get intended URL or default to dashboard
+              const intendedUrl = localStorage.getItem('intendedUrl');
+              localStorage.removeItem('intendedUrl');
+              const redirectUrl = intendedUrl || '/dashboard';
+              
+              console.log('OAuth: Redirecting to:', redirectUrl);
+              
+              // Use window.location.href for more reliable redirect
+              window.location.href = redirectUrl;
               return;
             }
           }
@@ -63,8 +71,13 @@ const OAuthCallback = () => {
         const session = data?.session;
 
         if (session) {
-          navigate('/dashboard');
+          const intendedUrl = localStorage.getItem('intendedUrl');
+          localStorage.removeItem('intendedUrl');
+          const redirectUrl = intendedUrl || '/dashboard';
+          console.log('Existing session found, redirecting to:', redirectUrl);
+          window.location.href = redirectUrl;
         } else {
+          console.log('No session found, redirecting to auth');
           navigate('/auth');
         }
       } catch (error) {

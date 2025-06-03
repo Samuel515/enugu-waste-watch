@@ -83,7 +83,13 @@ export const useAuthService = () => {
         description: "Welcome back!",
       });
       
-      navigate('/dashboard');
+      // Get intended URL or default to dashboard
+      const intendedUrl = localStorage.getItem('intendedUrl');
+      localStorage.removeItem('intendedUrl');
+      const redirectUrl = intendedUrl || '/dashboard';
+      
+      console.log('Login: Redirecting to:', redirectUrl);
+      navigate(redirectUrl);
     } catch (error: any) {
       console.error("Login error:", error);
       throw error;
@@ -157,6 +163,13 @@ export const useAuthService = () => {
 
   const signInWithGoogle = async () => {
     try {
+      // Store current URL before initiating OAuth
+      const currentPath = window.location.pathname + window.location.search + window.location.hash;
+      if (currentPath !== '/auth' && currentPath !== '/') {
+        localStorage.setItem('intendedUrl', currentPath);
+        console.log('Google auth: Storing intended URL:', currentPath);
+      }
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -198,6 +211,10 @@ export const useAuthService = () => {
       }
 
       setUser(null);
+      
+      // Clear any stored intended URL
+      localStorage.removeItem('intendedUrl');
+      
       toast({
         title: "Logged out",
         description: "You have been logged out successfully"

@@ -23,7 +23,19 @@ export const NotificationContext = createContext<NotificationContextType>({
 const READ_NOTIFICATIONS_KEY = "enugu_waste_read_notifications";
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
-  const { user, isLoading: authLoading } = useAuth();
+  // Check if we're inside AuthProvider first
+  let user = null;
+  let isLoading = true;
+  
+  try {
+    const authContext = useAuth();
+    user = authContext.user;
+    isLoading = authContext.isLoading;
+  } catch (error) {
+    // If useAuth fails, we're not inside AuthProvider yet
+    console.warn("NotificationProvider: AuthContext not yet available");
+  }
+
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [hasCollectionToday, setHasCollectionToday] = useState(false);
@@ -131,7 +143,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   // Refresh notifications count and check collections
   const refreshNotifications = async () => {
-    if (!user?.role || authLoading) return;
+    if (!user?.role || isLoading) return;
     
     try {
       // Prepare the query filters based on user role
@@ -172,7 +184,8 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   // Set up a listener for new reports to create notifications (now handled by database trigger)
   useEffect(() => {
-    if (!user || authLoading) return;
+    // Only proceed if we have a user and auth is not loading
+    if (!user || isLoading) return;
 
     // Refresh notifications on mount and when user or local read IDs change
     refreshNotifications();
@@ -192,7 +205,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       supabase.removeChannel(channel);
       clearInterval(intervalId);
     };
-  }, [user, localReadIds, authLoading]);
+  }, [user, localReadIds, isLoading]);
 
   return (
     <NotificationContext.Provider value={{

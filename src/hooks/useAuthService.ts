@@ -13,7 +13,6 @@ export const useAuthService = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('Fetching profile for user ID:', userId);
       
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -49,8 +48,6 @@ export const useAuthService = () => {
         
         return null;
       }
-
-      console.log('Profile fetched successfully:', profile);
       return profile;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
@@ -241,7 +238,7 @@ export const useAuthService = () => {
       
       // Use React Router navigation instead of window.location.href
       console.log('Logout successful, auth state change will handle redirect');
-      window.location.href = '/auh';
+      window.location.href = '/';
     } catch (error: any) {
       console.error("Logout error:", error);
       throw error;

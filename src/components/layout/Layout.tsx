@@ -30,7 +30,6 @@ const Layout = ({ children, requireAuth = false, allowedRoles = [] }: LayoutProp
     const currentPath = location.pathname + location.search + location.hash;
     if (currentPath !== '/auth' && currentPath !== '/') {
       localStorage.setItem('intendedUrl', currentPath);
-      console.log('Layout: Storing intended URL before redirect:', currentPath);
     }
     return <Navigate to="/auth" replace />;
   }

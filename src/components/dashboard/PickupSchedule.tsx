@@ -47,8 +47,6 @@ const PickupSchedule = () => {
           throw error;
         }
         
-        console.log('Fetched pickup schedules:', data);
-        
         if (data) {
           setUpcomingPickups(data);
           

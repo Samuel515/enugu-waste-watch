@@ -61,7 +61,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchUserProfile = async (userId: string): Promise<boolean> => {
     try {
-      console.log('Fetching user profile for:', userId);
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
@@ -83,7 +82,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         auth.setUser(auth.session?.user || null);
-        console.log('User profile loaded successfully');
         return true;
       } else {
         console.warn('No profile found for user:', userId);
@@ -113,9 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     let timeoutId: number;
 
     const initializeAuth = async () => {
-      try {
-        console.log('Starting auth initialization...');
-        
+      try {        
         // Set a timeout to prevent hanging
         timeoutId = window.setTimeout(() => {
           if (mounted && !authInitialized) {
@@ -137,13 +133,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return;
         }
 
-        console.log('Session check complete:', session ? 'Session found' : 'No session');
-
         if (mounted) {
           auth.setSession(session);
           
           if (session?.user) {
-            console.log('User found in session, fetching profile...');
             const profileFetched = await fetchUserProfile(session.user.id);
             if (!profileFetched) {
               console.warn('Profile fetch failed, but continuing with session');
@@ -175,15 +168,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth event:', event);
-        
+      async (event, session) => {        
         if (!mounted) return;
 
         auth.setSession(session);
         
         if (session?.user) {
-          console.log('Auth state change: User signed in, fetching profile...');
           
           // Use setTimeout to avoid blocking the auth flow
           setTimeout(async () => {
@@ -196,7 +186,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setTimeout(() => {
                   const intendedUrl = getAndClearIntendedUrl();
                   if (intendedUrl && intendedUrl !== '/auth') {
-                    console.log('Redirecting to intended URL:', intendedUrl);
                     navigate(intendedUrl, { replace: true });
                   } else {
                     console.log('Redirecting to dashboard');

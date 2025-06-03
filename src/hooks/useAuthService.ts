@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 import { UserRole } from "@/contexts/AuthContext";
 
 export const useAuthService = () => {
@@ -11,7 +10,6 @@ export const useAuthService = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -131,11 +129,10 @@ export const useAuthService = () => {
       if (emailExists) {
         toast({
           title: "Account exists",
-          description: "This email is already registered. Redirecting to login...",
+          description: "This email is already registered. Please use the login form instead.",
           variant: "destructive",
         });
         setIsLoading(false);
-        setTimeout(() => navigate('/auth?tab=login&reason=email-exists'), 2000);
         return { success: false, exists: true };
       }
       
@@ -148,7 +145,7 @@ export const useAuthService = () => {
             role,
             area,
           },
-          emailRedirectTo: `https://enuguwaste.com.ng/auth?tab=login&reason=email-verification`,
+          emailRedirectTo: `${window.location.origin}/auth?tab=login&reason=email-verification`,
         },
       });
       
@@ -195,7 +192,7 @@ export const useAuthService = () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `https://enuguwaste.com.ng/dashboard`,
+          redirectTo: `${window.location.origin}/dashboard`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -242,7 +239,8 @@ export const useAuthService = () => {
         description: "You have been logged out successfully"
       });
       
-      window.location.href = "/";
+      // Use React Router navigation instead of window.location.href
+      console.log('Logout successful, auth state change will handle redirect');
     } catch (error: any) {
       console.error("Logout error:", error);
       throw error;

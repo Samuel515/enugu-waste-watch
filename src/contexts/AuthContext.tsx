@@ -3,6 +3,7 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthService } from "@/hooks/useAuthService";
+import { useNavigate } from "react-router-dom";
 
 export type UserRole = "resident" | "official" | "admin";
 
@@ -40,6 +41,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
   const auth = useAuthService();
+  const navigate = useNavigate();
 
   // Store the intended URL when user tries to access a protected route
   const storeIntendedUrl = () => {
@@ -63,7 +65,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 8000)
       );
       
       const profilePromise = auth.fetchUserProfile(userId);
@@ -114,14 +116,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         console.log('Starting auth initialization...');
         
-        // Set a timeout to prevent hanging - reduced to 8 seconds
+        // Set a timeout to prevent hanging
         timeoutId = window.setTimeout(() => {
           if (mounted && !authInitialized) {
             console.warn('Auth initialization timeout, proceeding without session');
             setIsLoading(false);
             setAuthInitialized(true);
           }
-        }, 8000);
+        }, 6000);
 
         // Check for existing session
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -195,10 +197,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                   const intendedUrl = getAndClearIntendedUrl();
                   if (intendedUrl && intendedUrl !== '/auth') {
                     console.log('Redirecting to intended URL:', intendedUrl);
-                    window.location.href = intendedUrl;
+                    navigate(intendedUrl, { replace: true });
                   } else {
                     console.log('Redirecting to dashboard');
-                    window.location.href = '/dashboard';
+                    navigate('/dashboard', { replace: true });
                   }
                 }, 100);
               }
@@ -233,7 +235,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const value = {
     user: appUser,

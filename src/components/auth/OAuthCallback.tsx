@@ -58,10 +58,10 @@ const OAuthCallback = () => {
               
               if (intendedUrl && intendedUrl !== '/auth') {
                 console.log('OAuth: Redirecting to intended URL:', intendedUrl);
-                window.location.href = intendedUrl;
+                navigate(intendedUrl, { replace: true });
               } else {
                 console.log('OAuth: Redirecting to dashboard');
-                window.location.href = '/dashboard';
+                navigate('/dashboard', { replace: true });
               }
               return;
             }
@@ -78,10 +78,10 @@ const OAuthCallback = () => {
           
           if (intendedUrl && intendedUrl !== '/auth') {
             console.log('Existing session found, redirecting to intended URL:', intendedUrl);
-            window.location.href = intendedUrl;
+            navigate(intendedUrl, { replace: true });
           } else {
             console.log('Existing session found, redirecting to dashboard');
-            window.location.href = '/dashboard';
+            navigate('/dashboard', { replace: true });
           }
         } else {
           console.log('No session found, redirecting to auth');

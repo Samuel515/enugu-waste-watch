@@ -56,9 +56,6 @@ const OAuthCallback = () => {
               
               if (intendedUrl && intendedUrl !== '/auth') {
                 navigate(intendedUrl, { replace: true });
-              } else {
-                console.log('OAuth: Redirecting to dashboard');
-                window.location.assign('/dashboard')
               }
               return;
             }

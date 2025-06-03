@@ -10,8 +10,6 @@ import { PlusCircle } from "lucide-react";
 
 const Dashboard = () => {
   const { user } = useAuth();
-  
-  if (!user) return null;
 
   return (
     <Layout requireAuth>
@@ -20,7 +18,7 @@ const Dashboard = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground">
-              Welcome back, {user.name}
+              Welcome back, {user?.name || 'User'}
             </p>
           </div>
           <div>
@@ -33,14 +31,18 @@ const Dashboard = () => {
           </div>
         </div>
         
-        <div className="mb-8">
-          <DashboardStats userRole={user.role} />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <RecentReports userRole={user.role} />
-          <PickupSchedule />
-        </div>
+        {user && (
+          <>
+            <div className="mb-8">
+              <DashboardStats userRole={user.role} />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <RecentReports userRole={user.role} />
+              <PickupSchedule />
+            </div>
+          </>
+        )}
       </div>
     </Layout>
   );

@@ -25,7 +25,7 @@ const Layout = ({ children, requireAuth = false, allowedRoles = [] }: LayoutProp
   }
   
   // Check if authentication is required but user is not authenticated
-  if (requireAuth && !isAuthenticated && !isLoading) {
+  if (requireAuth && !isAuthenticated) {
     // Store the current path for redirect after login
     const currentPath = location.pathname + location.search + location.hash;
     if (currentPath !== '/auth' && currentPath !== '/') {
@@ -36,7 +36,7 @@ const Layout = ({ children, requireAuth = false, allowedRoles = [] }: LayoutProp
   }
 
   // Check if user role is allowed to access this page
-  if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+  if (requireAuth && user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 

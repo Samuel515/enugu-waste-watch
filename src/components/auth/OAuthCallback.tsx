@@ -12,7 +12,6 @@ const OAuthCallback = () => {
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
-        console.log('Processing OAuth callback...');
         // Parse the URL hash for OAuth tokens
         const hash = window.location.hash;
         
@@ -23,7 +22,6 @@ const OAuthCallback = () => {
           const refreshToken = hashParams.get('refresh_token');
           
           if (accessToken && refreshToken) {
-            console.log('Processing OAuth tokens...');
             
             // Set the session with the tokens
             const { data, error } = await supabase.auth.setSession({
@@ -57,11 +55,11 @@ const OAuthCallback = () => {
               localStorage.removeItem('intendedUrl');
               
               if (intendedUrl && intendedUrl !== '/auth') {
-                console.log('OAuth: Redirecting to intended URL:', intendedUrl);
                 navigate(intendedUrl, { replace: true });
               } else {
                 console.log('OAuth: Redirecting to dashboard');
                 navigate('/dashboard', { replace: true });
+                window.location.reload();
               }
               return;
             }

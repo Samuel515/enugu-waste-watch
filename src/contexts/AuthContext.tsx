@@ -57,6 +57,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return storedUrl;
   };
 
+  const fetchUserProfile = async (userId: string): Promise<boolean> => {
+    try {
+      console.log('Fetching user profile for:', userId);
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
+      );
+      
+      const profilePromise = auth.fetchUserProfile(userId);
+      const profile = await Promise.race([profilePromise, timeoutPromise]) as any;
+      
+      if (profile) {
+        const userEmail = auth.session?.user?.email || '';
+        
+        setAppUser({
+          id: profile.id,
+          name: profile.name || '',
+          email: profile.email || userEmail,
+          role: profile.role as UserRole,
+          area: profile.area
+        });
+
+        auth.setUser(auth.session?.user || null);
+        console.log('User profile loaded successfully');
+        return true;
+      } else {
+        console.warn('No profile found for user:', userId);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // Don't block auth flow if profile fetch fails
+      // Set basic user data from session
+      if (auth.session?.user) {
+        setAppUser({
+          id: auth.session.user.id,
+          name: auth.session.user.email?.split('@')[0] || '',
+          email: auth.session.user.email || '',
+          role: 'resident' as UserRole,
+          area: undefined
+        });
+        auth.setUser(auth.session.user);
+        console.log('Set basic user data due to profile fetch error');
+      }
+      return false;
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     let timeoutId: number;
@@ -65,14 +114,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         console.log('Starting auth initialization...');
         
-        // Set a timeout to prevent hanging - reduced to 5 seconds
+        // Set a timeout to prevent hanging - reduced to 8 seconds
         timeoutId = window.setTimeout(() => {
           if (mounted && !authInitialized) {
             console.warn('Auth initialization timeout, proceeding without session');
             setIsLoading(false);
             setAuthInitialized(true);
           }
-        }, 5000); // 5 seconds timeout
+        }, 8000);
 
         // Check for existing session
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -93,7 +142,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           if (session?.user) {
             console.log('User found in session, fetching profile...');
-            await fetchUserProfile(session.user.id);
+            const profileFetched = await fetchUserProfile(session.user.id);
+            if (!profileFetched) {
+              console.warn('Profile fetch failed, but continuing with session');
+            }
           } else {
             setAppUser(null);
             auth.setUser(null);
@@ -130,22 +182,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         if (session?.user) {
           console.log('Auth state change: User signed in, fetching profile...');
-          await fetchUserProfile(session.user.id);
           
-          // Handle redirect after successful authentication
-          if (event === 'SIGNED_IN') {
-            // Small delay to ensure profile is loaded
-            setTimeout(() => {
-              const intendedUrl = getAndClearIntendedUrl();
-              if (intendedUrl && intendedUrl !== '/auth') {
-                console.log('Redirecting to intended URL:', intendedUrl);
-                window.location.href = intendedUrl;
-              } else {
-                console.log('Redirecting to dashboard');
-                window.location.href = '/dashboard';
+          // Use setTimeout to avoid blocking the auth flow
+          setTimeout(async () => {
+            try {
+              const profileFetched = await fetchUserProfile(session.user.id);
+              
+              // Handle redirect after successful authentication
+              if (event === 'SIGNED_IN') {
+                // Small delay to ensure profile is loaded
+                setTimeout(() => {
+                  const intendedUrl = getAndClearIntendedUrl();
+                  if (intendedUrl && intendedUrl !== '/auth') {
+                    console.log('Redirecting to intended URL:', intendedUrl);
+                    window.location.href = intendedUrl;
+                  } else {
+                    console.log('Redirecting to dashboard');
+                    window.location.href = '/dashboard';
+                  }
+                }, 100);
               }
-            }, 100);
-          }
+            } catch (error) {
+              console.error('Profile fetch failed in auth state change:', error);
+            }
+          }, 0);
         } else {
           console.log('Auth state change: User signed out');
           setAppUser(null);
@@ -174,30 +234,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       subscription.unsubscribe();
     };
   }, []);
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      console.log('Fetching user profile for:', userId);
-      const profile = await auth.fetchUserProfile(userId);
-      
-      if (profile) {
-        const userEmail = auth.session?.user?.email || '';
-        
-        setAppUser({
-          id: profile.id,
-          name: profile.name || '',
-          email: profile.email || userEmail,
-          role: profile.role as UserRole,
-          area: profile.area
-        });
-
-        auth.setUser(auth.session?.user || null);
-        console.log('User profile loaded successfully');
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
 
   const value = {
     user: appUser,

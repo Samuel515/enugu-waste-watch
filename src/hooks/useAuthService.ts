@@ -15,6 +15,8 @@ export const useAuthService = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user ID:', userId);
+      
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -23,9 +25,34 @@ export const useAuthService = () => {
 
       if (error) {
         console.error('Error fetching user profile:', error);
+        
+        // If profile doesn't exist, create a basic one
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found, creating basic profile...');
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              name: user?.email?.split('@')[0] || 'User',
+              role: 'resident',
+              email: user?.email
+            })
+            .select()
+            .single();
+            
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            return null;
+          }
+          
+          console.log('Created basic profile:', newProfile);
+          return newProfile;
+        }
+        
         return null;
       }
 
+      console.log('Profile fetched successfully:', profile);
       return profile;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);

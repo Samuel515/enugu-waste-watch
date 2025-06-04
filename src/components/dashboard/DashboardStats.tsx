@@ -1,11 +1,12 @@
-
 import { ReactNode, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowUpRight, Truck, AlertTriangle, Calendar, Clock, LoaderCircle, CircleCheckBig } from "lucide-react";
+import { ArrowUpRight, Truck, AlertTriangle, Calendar, Clock, LoaderCircle, CircleCheckBig, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 interface StatsCardProps {
   title: string;
@@ -219,6 +220,9 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
     }
   }, [user, userRole]);
 
+  // Check if resident user has no area set
+  const showLocationPrompt = userRole === "resident" && user && !user.area;
+
   // Different stats based on user role
   const residentStats = [
     { 
@@ -283,10 +287,33 @@ const DashboardStats = ({ userRole }: DashboardStatsProps) => {
       : residentStats;
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {statsToShow.map((stat, index) => (
-        <StatsCard key={index} {...stat} />
-      ))}
+    <div className="space-y-4">
+      {showLocationPrompt && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start space-x-4">
+              <MapPin className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-medium text-amber-800">Update Your Location</h3>
+                <p className="text-sm text-amber-700 mt-1">
+                  To see your collection schedule and waste pickup times, please update your area in your profile.
+                </p>
+                <Button asChild size="sm" className="mt-3" variant="outline">
+                  <Link to="/profile">
+                    Update Profile
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      <div className="grid gap-4 md:grid-cols-3">
+        {statsToShow.map((stat, index) => (
+          <StatsCard key={index} {...stat} />
+        ))}
+      </div>
     </div>
   );
 };

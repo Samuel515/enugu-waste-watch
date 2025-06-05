@@ -49,6 +49,7 @@ export class UserManagementService {
           
           enhancedUsers.push({
             ...profile,
+            role: profile.role as "admin" | "official" | "resident", // Type assertion for role
             auth_confirmed: authData?.user?.email_confirmed_at !== null,
             last_sign_in_at: authData?.user?.last_sign_in_at || null
           });
@@ -56,6 +57,7 @@ export class UserManagementService {
           // If we can't access auth data, just use profile data
           enhancedUsers.push({
             ...profile,
+            role: profile.role as "admin" | "official" | "resident", // Type assertion for role
             auth_confirmed: true, // Assume confirmed if we can't check
             last_sign_in_at: null
           });

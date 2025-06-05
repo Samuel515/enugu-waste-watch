@@ -6,9 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, UserPlus, Edit, Trash2, UserCheck, UserX, Loader2 } from "lucide-react";
+import { Search, UserPlus, Edit, Trash2, UserCheck, UserX, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { 
   Dialog,
   DialogContent,
@@ -19,68 +18,30 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-
-// Define extended user type for the UI
-interface ExtendedUser {
-  id: string;
-  name: string;
-  email: string;
-  role: "admin" | "official" | "resident";
-  area: string | null;
-  is_active: boolean;
-}
+import { UserManagementService, EnhancedUser } from "@/services/userManagement";
 
 const ManageUsers = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState<ExtendedUser[]>([]);
+  const [users, setUsers] = useState<EnhancedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<ExtendedUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<EnhancedUser | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editRole, setEditRole] = useState<"admin" | "official" | "resident">("resident");
   const [editArea, setEditArea] = useState("");
   const { toast } = useToast();
 
-  // Fetch users from Supabase
+  // Fetch users from enhanced service
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setIsLoading(true);
-        
-        // Get all profiles from the profiles table, not just the current user
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*');
-        
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
-          throw profilesError;
-        }
-
-        if (!profilesData || profilesData.length === 0) {
-          console.log('No profiles found in the database');
-          setUsers([]);
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log('Profiles data fetched:', profilesData);
-        
-        // Map to ExtendedUser format
-        const mappedUsers: ExtendedUser[] = profilesData.map(profile => ({
-          id: profile.id,
-          name: profile.name || 'Unknown',
-          email: profile.email || 'No email',
-          role: (profile.role as "admin" | "official" | "resident") || 'resident',
-          area: profile.area,
-          is_active: profile.is_active !== false // Default to true if undefined
-        }));
-        
-        setUsers(mappedUsers);
-        console.log('Mapped users:', mappedUsers);
+        const enhancedUsers = await UserManagementService.getAllUsers();
+        setUsers(enhancedUsers);
+        console.log('Enhanced users loaded:', enhancedUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
         toast({
@@ -109,29 +70,16 @@ const ManageUsers = () => {
   const toggleUserStatus = async (userId: string) => {
     try {
       const userToUpdate = users.find(u => u.id === userId);
-      
       if (!userToUpdate) return;
       
       const newStatus = !userToUpdate.is_active;
       
-      // Update the status in the database
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          is_active: newStatus
-        })
-        .eq('id', userId);
-        
-      if (error) throw error;
+      await UserManagementService.toggleUserStatus(userId, newStatus);
       
-      // Update the user status in the UI
-      setUsers(
-        users.map((u) =>
-          u.id === userId
-            ? { ...u, is_active: newStatus }
-            : u
-        )
-      );
+      // Update local state
+      setUsers(users.map((u) =>
+        u.id === userId ? { ...u, is_active: newStatus } : u
+      ));
       
       toast({
         title: "Status updated",
@@ -152,23 +100,7 @@ const ManageUsers = () => {
     if (!currentUser) return;
     
     try {
-      // Delete user from profiles table first
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', currentUser.id);
-        
-      if (profileError) throw profileError;
-      
-      // Try to delete from auth as well (might require admin rights)
-      try {
-        const { error: authError } = await supabase.auth.admin.deleteUser(currentUser.id);
-        if (authError) {
-          console.warn('Could not delete user from auth system. This may require admin privileges:', authError);
-        }
-      } catch (authError) {
-        console.error('Could not delete user from auth system. This may require admin privileges:', authError);
-      }
+      await UserManagementService.deleteUser(currentUser.id);
       
       // Update local state
       setUsers(users.filter((u) => u.id !== currentUser.id));
@@ -183,7 +115,7 @@ const ManageUsers = () => {
       console.error('Error deleting user:', error);
       toast({
         title: "Delete failed",
-        description: "Failed to delete user. You may not have sufficient permissions.",
+        description: "Failed to delete user. Profile data removed but auth deletion may require admin privileges.",
         variant: "destructive",
       });
     }
@@ -194,34 +126,25 @@ const ManageUsers = () => {
     if (!currentUser) return;
     
     try {
-      // Update user in profiles table
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name: editName,
-          role: editRole,
-          area: editArea || null,
-          email: editEmail,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentUser.id);
-      
-      if (error) throw error;
+      await UserManagementService.updateUser(currentUser.id, {
+        name: editName,
+        email: editEmail,
+        role: editRole,
+        area: editArea || null
+      });
       
       // Update local state
-      setUsers(
-        users.map((u) =>
-          u.id === currentUser.id
-            ? {
-                ...u,
-                name: editName,
-                email: editEmail,
-                role: editRole,
-                area: editArea || null
-              }
-            : u
-        )
-      );
+      setUsers(users.map((u) =>
+        u.id === currentUser.id
+          ? {
+              ...u,
+              name: editName,
+              email: editEmail,
+              role: editRole,
+              area: editArea || null
+            }
+          : u
+      ));
       
       toast({
         title: "User updated",
@@ -240,7 +163,7 @@ const ManageUsers = () => {
   };
 
   // Open edit dialog and populate fields
-  const openEditDialog = (user: ExtendedUser) => {
+  const openEditDialog = (user: EnhancedUser) => {
     setCurrentUser(user);
     setEditName(user.name);
     setEditEmail(user.email);
@@ -250,7 +173,7 @@ const ManageUsers = () => {
   };
 
   // Open delete confirmation dialog
-  const openDeleteDialog = (user: ExtendedUser) => {
+  const openDeleteDialog = (user: EnhancedUser) => {
     setCurrentUser(user);
     setDeleteDialogOpen(true);
   };
@@ -324,13 +247,15 @@ const ManageUsers = () => {
                     <TableHead>Role</TableHead>
                     <TableHead>Area</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Auth Status</TableHead>
+                    <TableHead>Last Login</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={8} className="h-24 text-center">
                         <div className="flex items-center justify-center flex-col">
                           <Loader2 className="h-6 w-6 animate-spin mr-2" />
                           Loading users...
@@ -340,7 +265,7 @@ const ManageUsers = () => {
                   ) : filteredUsers.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={8}
                         className="text-center h-24 text-muted-foreground"
                       >
                         No users found
@@ -368,6 +293,24 @@ const ManageUsers = () => {
                           >
                             {user.is_active ? "Active" : "Inactive"}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {user.auth_confirmed ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-amber-500" />
+                            )}
+                            <span className="text-xs">
+                              {user.auth_confirmed ? "Confirmed" : "Pending"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {user.last_sign_in_at 
+                            ? new Date(user.last_sign_in_at).toLocaleDateString()
+                            : "Never"
+                          }
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">

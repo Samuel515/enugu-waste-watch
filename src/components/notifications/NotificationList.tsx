@@ -6,13 +6,12 @@ import { Bell, LoaderCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface Notification {
   id: string;
   title: string;
   message: string;
-  timestamp: string;
+  created_at: string;
   read: boolean;
   type: "collection" | "report" | "system";
   read_at: string | null;
@@ -82,7 +81,7 @@ const NotificationList: React.FC<NotificationListProps> = ({
               <div className={`mt-1 p-2 rounded-full ${notification.read ? "bg-muted" : "bg-waste-green/10"}`}>
                 <Bell className={`h-4 w-4 ${notification.read ? "text-muted-foreground" : "text-waste-green"}`} />
               </div>
-              <div>
+              <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium">{notification.title}</h4>
                   {!notification.read && (
@@ -92,7 +91,7 @@ const NotificationList: React.FC<NotificationListProps> = ({
                 <p className="text-sm mt-1">{notification.message}</p>
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(notification.timestamp), "MMM d, yyyy • h:mm a")}
+                    {format(new Date(notification.created_at), "MMM d, yyyy • h:mm a")}
                   </p>
                   
                   {!notification.read && onMarkAsRead && (

@@ -161,6 +161,7 @@ export type Database = {
           user_area: string | null
           user_id: string
           user_name: string | null
+          waste_type: string | null
         }
         Insert: {
           coordinates?: Json | null
@@ -175,6 +176,7 @@ export type Database = {
           user_area?: string | null
           user_id: string
           user_name?: string | null
+          waste_type?: string | null
         }
         Update: {
           coordinates?: Json | null
@@ -189,6 +191,7 @@ export type Database = {
           user_area?: string | null
           user_id?: string
           user_name?: string | null
+          waste_type?: string | null
         }
         Relationships: []
       }
@@ -205,6 +208,21 @@ export type Database = {
         Args: { phone_input: string }
         Returns: boolean
       }
+      get_user_with_auth_status: {
+        Args: { profile_user_id: string }
+        Returns: {
+          id: string
+          name: string
+          email: string
+          role: string
+          area: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+          auth_confirmed: boolean
+          last_sign_in_at: string
+        }[]
+      }
       log_notification_error: {
         Args: {
           p_user_id: string
@@ -213,6 +231,10 @@ export type Database = {
           p_related_operation: string
         }
         Returns: undefined
+      }
+      sync_profile_with_auth_status: {
+        Args: { profile_user_id: string; new_active_status: boolean }
+        Returns: boolean
       }
     }
     Enums: {

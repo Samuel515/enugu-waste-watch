@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link } from "react-router-dom";
 import { Report, ReportStatus } from "@/types/reports";
 import { supabase } from "@/integrations/supabase/client";
+import ReportStatusUpdater from "@/components/reports/ReportStatusUpdater";
 
 const ManageReports = () => {
   const { user } = useAuth();
@@ -24,7 +25,6 @@ const ManageReports = () => {
       setIsLoading(true);
       try {
         // Fetch reports from Supabase
-        // Need to cast the table name as a type workaround
         const { data, error } = await supabase
           .from('reports')
           .select('*')
@@ -112,6 +112,16 @@ const ManageReports = () => {
         updated_at: "2023-05-20T11:45:00Z"
       },
     ];
+  };
+
+  const handleStatusUpdate = (reportId: string, newStatus: ReportStatus) => {
+    setReports(prevReports => 
+      prevReports.map(report => 
+        report.id === reportId 
+          ? { ...report, status: newStatus, updated_at: new Date().toISOString() }
+          : report
+      )
+    );
   };
 
   // Filter reports based on search query and status filter
@@ -216,10 +226,17 @@ const ManageReports = () => {
                           <TableCell>{report.location}</TableCell>
                           <TableCell>{report.user_name || 'Anonymous'}</TableCell>
                           <TableCell>
-                            <Badge className={getStatusBadgeClass(report.status)}>
-                              {report.status === 'in-progress' ? 'In Progress' : 
-                                report.status.charAt(0).toUpperCase() + report.status.slice(1)}
-                            </Badge>
+                            <div className="flex flex-col gap-2">
+                              <Badge className={getStatusBadgeClass(report.status)}>
+                                {report.status === 'in-progress' ? 'In Progress' : 
+                                  report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+                              </Badge>
+                              <ReportStatusUpdater
+                                reportId={report.id}
+                                currentStatus={report.status}
+                                onStatusUpdate={(newStatus) => handleStatusUpdate(report.id, newStatus)}
+                              />
+                            </div>
                           </TableCell>
                           <TableCell>{formattedDate}</TableCell>
                           <TableCell className="text-right">

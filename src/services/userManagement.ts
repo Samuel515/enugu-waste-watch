@@ -45,19 +45,31 @@ export class UserManagementService {
       for (const profile of profilesData) {
         try {
           // Try to get auth user data (this might fail if user doesn't have admin rights)
-          const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
+          const { data: authData, error: authError } = await supabase.auth.admin.getUserById(profile.id);
           
+          if (authError) {
+            // If we get a 403 or other auth error, just use profile data
+            console.warn(`Cannot access auth data for user ${profile.id}:`, authError.message);
+            enhancedUsers.push({
+              ...profile,
+              role: profile.role as "admin" | "official" | "resident",
+              auth_confirmed: true, // Assume confirmed if we can't check
+              last_sign_in_at: null
+            });
+          } else {
+            enhancedUsers.push({
+              ...profile,
+              role: profile.role as "admin" | "official" | "resident",
+              auth_confirmed: authData?.user?.email_confirmed_at !== null,
+              last_sign_in_at: authData?.user?.last_sign_in_at || null
+            });
+          }
+        } catch (authError: any) {
+          // If we can't access auth data due to permissions, just use profile data
+          console.warn(`Cannot access auth data for user ${profile.id}:`, authError.message);
           enhancedUsers.push({
             ...profile,
-            role: profile.role as "admin" | "official" | "resident", // Type assertion for role
-            auth_confirmed: authData?.user?.email_confirmed_at !== null,
-            last_sign_in_at: authData?.user?.last_sign_in_at || null
-          });
-        } catch (authError) {
-          // If we can't access auth data, just use profile data
-          enhancedUsers.push({
-            ...profile,
-            role: profile.role as "admin" | "official" | "resident", // Type assertion for role
+            role: profile.role as "admin" | "official" | "resident",
             auth_confirmed: true, // Assume confirmed if we can't check
             last_sign_in_at: null
           });
@@ -110,10 +122,13 @@ export class UserManagementService {
       try {
         if (!newStatus) {
           // If deactivating, try to sign out the user from all sessions
-          await supabase.auth.admin.signOut(userId, 'global');
+          const { error: signOutError } = await supabase.auth.admin.signOut(userId, 'global');
+          if (signOutError) {
+            console.warn('Could not sign out user from auth:', signOutError.message);
+          }
         }
-      } catch (authError) {
-        console.warn('Could not sync auth status. Profile updated successfully.', authError);
+      } catch (authError: any) {
+        console.warn('Could not sync auth status. Profile updated successfully.', authError.message);
       }
     } catch (error) {
       console.error('Error toggling user status:', error);
@@ -136,10 +151,10 @@ export class UserManagementService {
       try {
         const { error: authError } = await supabase.auth.admin.deleteUser(userId);
         if (authError) {
-          console.warn('Profile deleted but could not delete from auth system:', authError);
+          console.warn('Profile deleted but could not delete from auth system:', authError.message);
         }
-      } catch (authError) {
-        console.warn('Profile deleted but could not delete from auth system:', authError);
+      } catch (authError: any) {
+        console.warn('Profile deleted but could not delete from auth system:', authError.message);
       }
     } catch (error) {
       console.error('Error deleting user:', error);

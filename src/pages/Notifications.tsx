@@ -287,7 +287,7 @@ const Notifications = () => {
       id: collection.id,
       title: "Upcoming Waste Collection",
       message: `A waste collection is scheduled for your area (${user?.area}) on ${formattedDate}. Please ensure your waste is properly sorted and ready for collection.`,
-      timestamp: collection.created_at,
+      created_at: collection.created_at, // Add the missing created_at property
       read: false,
       type: "collection" as const,
       read_at: null

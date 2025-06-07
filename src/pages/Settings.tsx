@@ -321,7 +321,7 @@ const Settings = () => {
                       <DialogTrigger asChild>
                         <Button variant="destructive">
                           <span className="md:inline">
-                            Please contact support to delete your account
+                            Contact Support
                           </span>
                           <span className="md:hidden">Contact support</span>
                         </Button>

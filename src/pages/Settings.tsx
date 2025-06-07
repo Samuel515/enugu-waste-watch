@@ -323,7 +323,6 @@ const Settings = () => {
                           <span className="md:inline">
                             Contact Support
                           </span>
-                          <span className="md:hidden">Contact support</span>
                         </Button>
                       </DialogTrigger>
                       <DialogContent>

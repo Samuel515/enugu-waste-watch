@@ -238,7 +238,7 @@ export const useAuthService = () => {
       
       // Use React Router navigation instead of window.location.href
       console.log('Logout successful, auth state change will handle redirect');
-      window.location.href = '/';
+      window.location.href = '/auth';
     } catch (error: any) {
       console.error("Logout error:", error);
       throw error;

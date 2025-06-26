@@ -146,10 +146,8 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     if (!user?.role || isLoading) return;
     
     try {
-      console.log(`Refreshing notifications for user: ${user.id}, role: ${user.role}`);
-      
       // Prepare the query filters based on user role
-      let query = supabase.from('notifications').select('id, read');
+      let query = supabase.from('notifications').select('id');
       
       // Filter notifications based on user role and id
       if (user.role === 'official' || user.role === 'admin') {
@@ -166,15 +164,11 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         
       if (error) throw error;
       
-      console.log(`Found ${data?.length || 0} unread notifications`);
-      
       if (data) {
         // Filter out locally marked as read notifications
         const actuallyUnread = data.filter((n: {id: string}) => !localReadIds.includes(n.id));
         setUnreadCount(actuallyUnread.length);
         setHasNewNotifications(actuallyUnread.length > 0);
-        
-        console.log(`After filtering locally read: ${actuallyUnread.length} unread notifications`);
       }
       
       // Check for today's collections
@@ -188,12 +182,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Set up a listener for new reports to create notifications and real-time updates
+  // Set up a listener for new reports to create notifications (now handled by database trigger)
   useEffect(() => {
     // Only proceed if we have a user and auth is not loading
     if (!user || isLoading) return;
-
-    console.log(`Setting up notification listeners for user: ${user.id}`);
 
     // Refresh notifications on mount and when user or local read IDs change
     refreshNotifications();
@@ -203,16 +195,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       .channel('notification-changes')
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'notifications' },
-        (payload) => {
-          console.log('New notification received:', payload);
-          refreshNotifications();
-        })
-      .on('postgres_changes', 
-        { event: 'UPDATE', schema: 'public', table: 'notifications' },
-        (payload) => {
-          console.log('Notification updated:', payload);
-          refreshNotifications();
-        })
+        () => refreshNotifications())
       .subscribe();
       
     // Refresh every 5 minutes

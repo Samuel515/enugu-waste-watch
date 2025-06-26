@@ -36,7 +36,6 @@ const ReportStatusUpdater: React.FC<ReportStatusUpdaterProps> = ({
     try {
       console.log(`Updating report ${reportId} status from ${currentStatus} to ${newStatus}`);
       
-      // Update the report status - this will trigger the database trigger
       const { error } = await supabase
         .from('reports')
         .update({ 
@@ -47,15 +46,12 @@ const ReportStatusUpdater: React.FC<ReportStatusUpdaterProps> = ({
 
       if (error) throw error;
 
-      // Call the parent callback to update the UI
       onStatusUpdate(newStatus);
       
       toast({
         title: "Status updated",
         description: `Report status changed to ${newStatus}`,
       });
-      
-      console.log(`Successfully updated report ${reportId} status to ${newStatus}`);
     } catch (error: any) {
       console.error('Error updating report status:', error);
       toast({

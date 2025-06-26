@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -90,8 +89,6 @@ const Notifications = () => {
       setIsLoading(true);
       
       try {
-        console.log(`Fetching notifications for user: ${user.id}, role: ${user.role}`);
-        
         // Base query
         let query = supabase
           .from('notifications')
@@ -112,8 +109,6 @@ const Notifications = () => {
           
         if (error) throw error;
         
-        console.log(`Fetched ${data?.length || 0} notifications from database`);
-        
         if (data) {
           const formattedNotifications: Notification[] = data.map((item: any) => {
             // Apply locally tracked read status
@@ -133,7 +128,6 @@ const Notifications = () => {
           });
           
           setNotifications(formattedNotifications);
-          console.log(`Processed ${formattedNotifications.length} notifications`);
         }
       } catch (error: any) {
         console.error('Error fetching notifications:', error);
@@ -156,22 +150,12 @@ const Notifications = () => {
         { 
           event: 'INSERT', 
           schema: 'public', 
-          table: 'notifications'
+          table: 'notifications',
+          filter: user.role === 'official' 
+            ? `for_all=eq.true,recipient_role=eq.official,for_user_id=eq.${user.id}` 
+            : `for_all=eq.true,for_user_id=eq.${user.id}`
         }, 
-        (payload) => {
-          console.log('New notification received via realtime:', payload);
-          fetchNotifications();
-        })
-      .on('postgres_changes', 
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'notifications'
-        }, 
-        (payload) => {
-          console.log('Notification updated via realtime:', payload);
-          fetchNotifications();
-        })
+        () => fetchNotifications())
       .subscribe();
     
     return () => {
@@ -303,7 +287,7 @@ const Notifications = () => {
       id: collection.id,
       title: "Upcoming Waste Collection",
       message: `A waste collection is scheduled for your area (${user?.area}) on ${formattedDate}. Please ensure your waste is properly sorted and ready for collection.`,
-      created_at: collection.created_at,
+      created_at: collection.created_at, // Add the missing created_at property
       read: false,
       type: "collection" as const,
       read_at: null

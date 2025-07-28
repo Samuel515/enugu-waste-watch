@@ -354,24 +354,25 @@ const UpdateSchedules = () => {
                   <p className="text-xs text-muted-foreground">Create a new schedule to see it here</p>
                 </div>
               ) : (
-                <div className="rounded-md border h-full flex flex-col overflow-x-auto">
-                  <div className="border-b">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="min-w-[100px]">Area</TableHead>
-                          <TableHead className="min-w-[90px]">Date</TableHead>
-                          <TableHead className="min-w-[70px]">Time</TableHead>
-                          <TableHead className="min-w-[80px]">Status</TableHead>
-                          <TableHead className="min-w-[100px] hidden sm:table-cell">Notes</TableHead>
-                          <TableHead className="text-right min-w-[140px] sm:min-w-[200px]">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                    </Table>
-                  </div>
-                  <ScrollArea className="flex-1">
-                    <Table>
-                      <TableBody>
+                <div className="rounded-md border h-full flex flex-col">
+                  <div className="overflow-x-auto">
+                    <div className="border-b">
+                      <Table className="min-w-[600px]">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[100px]">Area</TableHead>
+                            <TableHead className="min-w-[90px]">Date</TableHead>
+                            <TableHead className="min-w-[70px]">Time</TableHead>
+                            <TableHead className="min-w-[80px]">Status</TableHead>
+                            <TableHead className="min-w-[100px] hidden sm:table-cell">Notes</TableHead>
+                            <TableHead className="text-right min-w-[140px] sm:min-w-[200px]">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                      </Table>
+                    </div>
+                    <ScrollArea className="flex-1">
+                      <Table className="min-w-[600px]">
+                        <TableBody>
                         {currentSchedules.map((schedule) => {
                           const pickupDate = new Date(schedule.pickup_date);
                           
@@ -437,9 +438,10 @@ const UpdateSchedules = () => {
                             </TableRow>
                           );
                         })}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </div>
                 </div>
               )}
             </CardContent>

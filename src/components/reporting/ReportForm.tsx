@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -138,12 +137,12 @@ const ReportForm = () => {
           user_name: user.name,
           user_area: user.area,
           image_url: images.length > 0 ? images[0] : null,
-          waste_type: wasteType,  // Adding the waste type to the submission
+          waste_type: wasteType, // Adding the waste type to the submission
         })
         .select()) as any;
 
       if (error) throw error;
-      
+
       toast({
         title: "Report submitted successfully",
         description:

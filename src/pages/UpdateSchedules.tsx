@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, PlusCircle, Trash2, Calendar as CalendarIcon2, LoaderCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -333,14 +334,14 @@ const UpdateSchedules = () => {
             </CardContent>
           </Card>
 
-          <Card className="md:col-span-2">
-            <CardHeader>
+          <Card className="md:col-span-2 h-[600px] flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <CardTitle>Existing Schedules</CardTitle>
               <CardDescription>
                 View and manage all waste collection schedules
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 min-h-0">
               {isLoading ? (
                 <div className="text-center py-10">
                   <LoaderCircle className="mx-auto h-8 w-8 text-waste-green animate-spin mb-2" />
@@ -353,82 +354,88 @@ const UpdateSchedules = () => {
                   <p className="text-xs text-muted-foreground">Create a new schedule to see it here</p>
                 </div>
               ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Area</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Notes</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {currentSchedules.map((schedule) => {
-                        const pickupDate = new Date(schedule.pickup_date);
-                        
-                        return (
-                          <TableRow key={schedule.id}>
-                            <TableCell>{schedule.area}</TableCell>
-                            <TableCell>{format(pickupDate, 'PP')}</TableCell>
-                            <TableCell>{format(pickupDate, 'h:mm a')}</TableCell>
-                            <TableCell>
-                              <Badge className={getStatusBadgeClass(schedule.status)}>
-                                {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="max-w-[200px] truncate">
-                              {schedule.notes || "-"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                {schedule.status !== "completed" && (
+                <div className="rounded-md border h-full flex flex-col">
+                  <div className="border-b">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Area</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Notes</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                    </Table>
+                  </div>
+                  <ScrollArea className="flex-1">
+                    <Table>
+                      <TableBody>
+                        {currentSchedules.map((schedule) => {
+                          const pickupDate = new Date(schedule.pickup_date);
+                          
+                          return (
+                            <TableRow key={schedule.id}>
+                              <TableCell>{schedule.area}</TableCell>
+                              <TableCell>{format(pickupDate, 'PP')}</TableCell>
+                              <TableCell>{format(pickupDate, 'h:mm a')}</TableCell>
+                              <TableCell>
+                                <Badge className={getStatusBadgeClass(schedule.status)}>
+                                  {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate">
+                                {schedule.notes || "-"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  {schedule.status !== "completed" && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => updateScheduleStatus(schedule.id, "completed")}
+                                      disabled={isUpdating[schedule.id]}
+                                    >
+                                      {isUpdating[schedule.id] ? (
+                                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        "Mark Complete"
+                                      )}
+                                    </Button>
+                                  )}
+                                  
+                                  {schedule.status !== "cancelled" && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => updateScheduleStatus(schedule.id, "cancelled")}
+                                      disabled={isUpdating[schedule.id]}
+                                    >
+                                      {isUpdating[schedule.id] ? (
+                                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        "Cancel"
+                                      )}
+                                    </Button>
+                                  )}
+                                  
                                   <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => updateScheduleStatus(schedule.id, "completed")}
-                                    disabled={isUpdating[schedule.id]}
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    onClick={() => handleDeleteSchedule(schedule.id)}
                                   >
-                                    {isUpdating[schedule.id] ? (
-                                      <LoaderCircle className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      "Mark Complete"
-                                    )}
+                                    <Trash2 className="h-4 w-4" />
                                   </Button>
-                                )}
-                                
-                                {schedule.status !== "cancelled" && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => updateScheduleStatus(schedule.id, "cancelled")}
-                                    disabled={isUpdating[schedule.id]}
-                                  >
-                                    {isUpdating[schedule.id] ? (
-                                      <LoaderCircle className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                      "Cancel"
-                                    )}
-                                  </Button>
-                                )}
-                                
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={() => handleDeleteSchedule(schedule.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
                 </div>
               )}
             </CardContent>

@@ -239,8 +239,8 @@ const UpdateSchedules = () => {
           </p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
-          <Card className="md:col-span-1 max-h-max">
+        <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
+          <Card className="lg:col-span-1 max-h-max">
             <CardHeader>
               <CardTitle>Create New Schedule</CardTitle>
               <CardDescription>
@@ -334,7 +334,7 @@ const UpdateSchedules = () => {
             </CardContent>
           </Card>
 
-          <Card className="md:col-span-2 h-[600px] flex flex-col">
+          <Card className="lg:col-span-2 h-[400px] lg:h-[600px] flex flex-col">
             <CardHeader className="flex-shrink-0">
               <CardTitle>Existing Schedules</CardTitle>
               <CardDescription>
@@ -354,17 +354,17 @@ const UpdateSchedules = () => {
                   <p className="text-xs text-muted-foreground">Create a new schedule to see it here</p>
                 </div>
               ) : (
-                <div className="rounded-md border h-full flex flex-col">
+                <div className="rounded-md border h-full flex flex-col overflow-x-auto">
                   <div className="border-b">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Area</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Time</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Notes</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead className="min-w-[100px]">Area</TableHead>
+                          <TableHead className="min-w-[90px]">Date</TableHead>
+                          <TableHead className="min-w-[70px]">Time</TableHead>
+                          <TableHead className="min-w-[80px]">Status</TableHead>
+                          <TableHead className="min-w-[100px] hidden sm:table-cell">Notes</TableHead>
+                          <TableHead className="text-right min-w-[140px] sm:min-w-[200px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                     </Table>
@@ -385,23 +385,25 @@ const UpdateSchedules = () => {
                                   {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="max-w-[200px] truncate">
+                              <TableCell className="max-w-[200px] truncate hidden sm:table-cell">
                                 {schedule.notes || "-"}
                               </TableCell>
                               <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
+                                <div className="flex flex-col sm:flex-row justify-end gap-1 sm:gap-2">
                                   {schedule.status !== "completed" && (
                                     <Button
                                       variant="outline"
                                       size="sm"
+                                      className="min-h-[44px] text-xs sm:text-sm"
                                       onClick={() => updateScheduleStatus(schedule.id, "completed")}
                                       disabled={isUpdating[schedule.id]}
                                     >
                                       {isUpdating[schedule.id] ? (
                                         <LoaderCircle className="h-4 w-4 animate-spin" />
                                       ) : (
-                                        "Mark Complete"
+                                        <span className="hidden sm:inline">Mark Complete</span>
                                       )}
+                                      <span className="sm:hidden">✓</span>
                                     </Button>
                                   )}
                                   
@@ -409,21 +411,23 @@ const UpdateSchedules = () => {
                                     <Button
                                       variant="outline"
                                       size="sm"
+                                      className="min-h-[44px] text-xs sm:text-sm"
                                       onClick={() => updateScheduleStatus(schedule.id, "cancelled")}
                                       disabled={isUpdating[schedule.id]}
                                     >
                                       {isUpdating[schedule.id] ? (
                                         <LoaderCircle className="h-4 w-4 animate-spin" />
                                       ) : (
-                                        "Cancel"
+                                        <span className="hidden sm:inline">Cancel</span>
                                       )}
+                                      <span className="sm:hidden">✕</span>
                                     </Button>
                                   )}
                                   
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    className="h-8 w-8 min-h-[44px] text-destructive hover:text-destructive"
                                     onClick={() => handleDeleteSchedule(schedule.id)}
                                   >
                                     <Trash2 className="h-4 w-4" />

@@ -1,4 +1,3 @@
-
 name: Deploy
 on:
   push:
@@ -36,7 +35,6 @@ jobs:
           ls -la dist/
           echo "Checking if index.html exists..."
           ls -la dist/index.html
-
       - name: Install Deno
         uses: denoland/setup-deno@v2
         with:
@@ -48,3 +46,4 @@ jobs:
           project: "enugu-waste-watch"
           entrypoint: "./server.ts"
           root: "."
+          include: "server.ts,dist"
